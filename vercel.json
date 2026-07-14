@@ -7,6 +7,10 @@
       "config": {
         "pythonVersion": "3.12"
       }
+    },
+    {
+      "src": "frontend/**",
+      "use": "@vercel/static"
     }
   ],
   "routes": [
