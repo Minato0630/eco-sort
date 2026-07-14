@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Collector Portal — BHC EcoSort</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="ecosort-logo.png">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        :root {
+            --bg-color: #030712;
+            --sidebar-bg: rgba(10, 15, 30, 0.7);
+            --card-bg: rgba(17, 24, 39, 0.45);
+            --border-color: rgba(229, 193, 88, 0.1);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --primary: #e5c158;
+            --primary-glow: rgba(229, 193, 88, 0.2);
+            --secondary: #1e40af;
+            --accent: #f59e0b;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Outfit', sans-serif; transition: background-color 0.3s, border-color 0.3s, transform 0.2s, box-shadow 0.2s; }
+        body {
+            background: radial-gradient(circle at center, rgba(3, 7, 18, 0.75) 0%, rgba(3, 7, 18, 0.95) 100%),
+                        url('https://images.unsplash.com/photo-1518531933037-91b2f5f229cc?auto=format&fit=crop&w=1920&q=80') no-repeat center center fixed;
+            background-size: cover;
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        body::before {
+            content: "";
+            position: absolute;
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(229, 193, 88, 0.04) 0%, transparent 70%);
+            top: 5%;
+            right: 10%;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        body::after {
+            content: "";
+            position: absolute;
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, rgba(30, 64, 175, 0.04) 0%, transparent 70%);
+            bottom: 5%;
+            left: 5%;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .sidebar {
+            width: 260px;
+            height: 100vh;
+            background: var(--sidebar-bg);
+            border-right: 1px solid var(--border-color);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            display: flex;
+            flex-direction: column;
+            padding: 30px 20px;
+            z-index: 100;
+            box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3);
+        }
+        .logo-section { display: flex; align-items: center; gap: 12px; margin-bottom: 40px; padding-left: 4px; }
+        .logo-section .clg-logo { height: 38px; width: 38px; object-fit: contain; filter: drop-shadow(0 0 8px var(--primary-glow)); }
+        .logo-title { font-size: 1.3rem; font-weight: 800; background: linear-gradient(135deg, #ffffff, #e5c158); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .nav-menu { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+        .nav-item { display: flex; align-items: center; gap: 15px; padding: 12px 18px; border-radius: 12px; cursor: pointer; color: var(--text-muted); font-weight: 500; border: 1px solid transparent; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); }
+        .nav-item:hover { color: #fff; background: rgba(255, 255, 255, 0.04); border-color: rgba(255, 255, 255, 0.05); transform: translateX(3px); }
+        .nav-item.active { color: #fff; background: rgba(229, 193, 88, 0.12); border: 1px solid rgba(229, 193, 88, 0.2); box-shadow: 0 4px 15px rgba(229, 193, 88, 0.05); }
+        .user-profile { margin-top: auto; border-top: 1px solid var(--border-color); padding-top: 20px; display: flex; align-items: center; gap: 12px; }
+        .avatar { width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, var(--secondary), var(--primary)); display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; box-shadow: 0 4px 12px rgba(229, 193, 88, 0.2); }
+        
+        .main-content { flex: 1; height: 100vh; padding: 40px; overflow-y: auto; display: flex; flex-direction: column; gap: 30px; background: transparent; z-index: 2; }
+        .header { display: flex; justify-content: space-between; align-items: center; }
+        .header h1 { font-size: 2rem; font-weight: 700; letter-spacing: -0.5px; }
+        .btn { background: linear-gradient(135deg, var(--secondary), #1d4ed8); color: white; border: none; padding: 10px 20px; border-radius: 10px; font-weight: 600; cursor: pointer; transition: all 0.2s; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; }
+        .btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(30, 64, 175, 0.35); }
+        .btn-gold { background: linear-gradient(135deg, var(--primary), #b5952c); color: #050a18; }
+        .btn-gold:hover { box-shadow: 0 4px 12px var(--primary-glow); }
+        
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; }
+        .stat-card { background: var(--card-bg); border: 1px solid var(--border-color); padding: 20px; border-radius: 16px; display: flex; align-items: center; gap: 15px; position: relative; overflow: hidden; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .stat-card:hover { transform: translateY(-4px); border-color: rgba(229, 193, 88, 0.2); box-shadow: 0 12px 24px rgba(229, 193, 88, 0.05), 0 4px 12px rgba(0, 0, 0, 0.3); }
+        .stat-card::before { content: ''; position: absolute; top:0; left:0; width:4px; height:100%; background: var(--theme-color, var(--primary)); }
+        .stat-icon { width: 44px; height: 44px; border-radius: 10px; background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: center; font-size: 1.2rem; color: var(--theme-color, var(--primary)); transition: all 0.3s; }
+        .stat-card:hover .stat-icon { transform: scale(1.1) rotate(5deg); }
+        .stat-info p { font-size: 1.5rem; font-weight: 700; }
+        .stat-info h3 { font-size: 0.8rem; text-transform: uppercase; color: var(--text-muted); }
+ 
+        .layout-grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 25px; }
+        @media (max-width: 1024px) { .layout-grid { grid-template-columns: 1fr; } }
+        
+        .widget { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 16px; padding: 20px; display: flex; flex-direction: column; gap: 15px; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .widget:hover { border-color: rgba(229, 193, 88, 0.18); box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3); }
+        .widget-title { font-weight: 600; font-size: 1.1rem; display: flex; justify-content: space-between; align-items: center; }
+        
+        #map { width: 100%; height: 350px; border-radius: 12px; border: 1px solid var(--border-color); z-index: 10; }
+        
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        th { padding: 10px; color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase; border-bottom: 1px solid var(--border-color); }
+        td { padding: 12px 10px; border-bottom: 1px solid var(--border-color); font-size: 0.85rem; }
+        tr:last-child td { border-bottom: none; }
+        
+        .status-badge { padding: 3px 8px; border-radius: 10px; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; }
+        .status-badge.pending { background: rgba(245,158,11,0.15); color: var(--accent); }
+        .status-badge.claimed { background: rgba(30,64,175,0.15); color: #60a5fa; }
+        .status-badge.completed { background: rgba(16,185,129,0.15); color: #10b981; }
+        
+        .action-btn { border: none; padding: 5px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; cursor: pointer; transition: 0.2s; }
+        .action-btn.claim { background: var(--secondary); color: white; }
+        .action-btn.claim:hover { background: #1d4ed8; }
+        .action-btn.complete { background: #10b981; color: white; }
+        .action-btn.complete:hover { background: #059669; }
+    </style>
+</head>
+<body>
+
+    <aside class="sidebar">
+        <div class="logo-section">
+            <img src="ecosort-logo.png" class="clg-logo" alt="BHC Logo">
+            <span class="logo-title">BHC EcoSort</span>
+        </div>
+        <ul class="nav-menu">
+            <li class="nav-item active"><i class="fa-solid fa-truck-ramp-box"></i> Collector Run</li>
+            <li class="nav-item" onclick="window.location.href='index.html'"><i class="fa-solid fa-house"></i> Student Portal</li>
+            <li class="nav-item" onclick="window.location.href='admin.html'"><i class="fa-solid fa-lock"></i> Admin Panel</li>
+        </ul>
+        <div class="user-profile" style="cursor: pointer;" onclick="window.location.href='index.html'">
+            <div style="position: relative; width: 40px; height: 40px; border-radius: 50%; overflow: hidden; flex-shrink: 0; box-shadow: 0 4px 12px rgba(229, 193, 88, 0.2);">
+                <img id="avatarImage" src="" style="width: 100%; height: 100%; object-fit: cover; display: none;">
+                <div id="avatarLetter" class="avatar" style="width: 100%; height: 100%; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; color: white; background: linear-gradient(135deg, var(--secondary), var(--primary));">C</div>
+            </div>
+            <div>
+                <h4 style="font-size:0.9rem;" id="usernameDisplay">Collector</h4>
+                <p style="font-size:0.75rem; color:var(--primary);">BHC Volunteer</p>
+            </div>
+            <i class="fa-solid fa-right-from-bracket" onclick="event.stopPropagation(); logout()" style="margin-left:auto; color:#ef4444; cursor:pointer;" title="Logout"></i>
+        </div>
+    </aside>
+
+    <main class="main-content">
+        <div class="header">
+            <div>
+                <h1>Campus Collector Portal</h1>
+                <p style="color: var(--text-muted); margin-top:4px;">Retrieve bulk recycling logs and claim garbage collection runs</p>
+            </div>
+            <a href="index.html" class="btn"><i class="fa-solid fa-arrow-left"></i> Back to Main Portal</a>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card" style="--theme-color: #e5c158;">
+                <div class="stat-icon"><i class="fa-solid fa-clipboard-list"></i></div>
+                <div class="stat-info">
+                    <h3 id="statAvailable">--</h3>
+                    <p>Available Runs</p>
+                </div>
+            </div>
+            <div class="stat-card" style="--theme-color: #3b82f6;">
+                <div class="stat-icon"><i class="fa-solid fa-truck-pickup"></i></div>
+                <div class="stat-info">
+                    <h3 id="statActive">--</h3>
+                    <p>My Active Claims</p>
+                </div>
+            </div>
+            <div class="stat-card" style="--theme-color: #10b981;">
+                <div class="stat-icon"><i class="fa-solid fa-circle-check"></i></div>
+                <div class="stat-info">
+                    <h3 id="statCompleted">--</h3>
+                    <p>Completed Runs</p>
+                </div>
+            </div>
+            <div class="stat-card" style="--theme-color: #ef4444;">
+                <div class="stat-icon"><i class="fa-solid fa-award"></i></div>
+                <div class="stat-info">
+                    <h3 id="collectorPoints">--</h3>
+                    <p>Volunteer Score</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="layout-grid">
+            <div class="widget">
+                <div class="widget-title">Active Collection Map (Bishop Heber Campus)</div>
+                <div id="map"></div>
+            </div>
+
+            <div class="widget">
+                <div class="widget-title">Active Claims List</div>
+                <div style="overflow-x:auto;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Location</th>
+                                <th>Material</th>
+                                <th>Schedule</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="activeClaimsRows">
+                            <!-- Dynamic Active Claims -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="widget">
+            <div class="widget-title">All Scheduled Pickups</div>
+            <div style="overflow-x:auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Requester</th>
+                            <th>Material Type</th>
+                            <th>Block / Building</th>
+                            <th>Room/Lab</th>
+                            <th>Date & Time</th>
+                            <th>Status</th>
+                            <th>Assigned Driver</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="allPickupsRows">
+                        <!-- Dynamic all pickups -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const API_URL = (window.location.protocol === 'file:' || !window.location.hostname) 
+            ? "http://127.0.0.1:5000" 
+            : window.location.origin;
+        let currentUser = null;
+        let mapObj = null;
+        let markers = [];
+
+        window.addEventListener('load', () => {
+            const cachedUser = localStorage.getItem('eco_user');
+            if (cachedUser) {
+                currentUser = JSON.parse(cachedUser);
+                
+                // Route Guard: only Collector, Admin, SuperAdmin
+                if (currentUser.role !== 'Collector' && currentUser.role !== 'Admin' && currentUser.role !== 'SuperAdmin') {
+                    alert("Access Denied. Collector portal requires volunteer or staff privileges.");
+                    window.location.href = "index.html";
+                    return;
+                }
+                
+                document.getElementById('usernameDisplay').innerText = currentUser.username;
+                
+                // Render Avatar
+                const avatarImg = document.getElementById('avatarImage');
+                const avatarLet = document.getElementById('avatarLetter');
+                if (currentUser.avatar_url) {
+                    avatarImg.src = `${API_URL}/${currentUser.avatar_url}?v=${new Date().getTime()}`;
+                    avatarImg.style.display = 'block';
+                    avatarLet.style.display = 'none';
+                } else {
+                    avatarImg.style.display = 'none';
+                    avatarLet.style.display = 'flex';
+                    avatarLet.innerText = currentUser.username.charAt(0).toUpperCase();
+                }
+                document.getElementById('collectorPoints').innerText = currentUser.points + " pts";
+                
+                initMap();
+                loadPickups();
+            } else {
+                window.location.href = "index.html";
+            }
+        });
+
+        function logout() {
+            localStorage.removeItem('eco_user');
+            window.location.href = "index.html";
+        }
+
+        function initMap() {
+            const mapCenter = [10.8156, 78.67336]; // Bishop Heber College
+            mapObj = L.map('map').setView(mapCenter, 17);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(mapObj);
+        }
+
+        function loadPickups() {
+            fetch(API_URL + "/api/pickups")
+                .then(res => res.json())
+                .then(pickups => {
+                    renderStats(pickups);
+                    renderActiveClaims(pickups);
+                    renderAllPickupsList(pickups);
+                    renderMapPins(pickups);
+                })
+                .catch(err => console.error("Error fetching pickups:", err));
+        }
+
+        function renderStats(pickups) {
+            const available = pickups.filter(p => p.status === 'Pending').length;
+            const active = pickups.filter(p => p.status === 'Claimed' && p.claimed_by === currentUser.id).length;
+            const completed = pickups.filter(p => p.status === 'Completed' && p.claimed_by === currentUser.id).length;
+            
+            document.getElementById('statAvailable').innerText = available;
+            document.getElementById('statActive').innerText = active;
+            document.getElementById('statCompleted').innerText = completed;
+        }
+
+        function renderActiveClaims(pickups) {
+            const tbody = document.getElementById('activeClaimsRows');
+            tbody.innerHTML = '';
+            
+            const activeClaims = pickups.filter(p => p.status === 'Claimed' && p.claimed_by === currentUser.id);
+            if (activeClaims.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;color:var(--text-muted);">No claimed runs in progress.</td></tr>`;
+                return;
+            }
+
+            activeClaims.forEach(p => {
+                const tr = document.createElement('tr');
+                const dateStr = new Date(p.date_time).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit' });
+                tr.innerHTML = `
+                    <td><strong>${p.block_name}</strong><br><span style="font-size:0.75rem;color:var(--text-muted);">${p.room_number}</span></td>
+                    <td>${p.waste_type}</td>
+                    <td>${dateStr}</td>
+                    <td><button class="action-btn complete" onclick="updateStatus(${p.id}, 'Completed')"><i class="fa-solid fa-check"></i> Collect</button></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function renderAllPickupsList(pickups) {
+            const tbody = document.getElementById('allPickupsRows');
+            tbody.innerHTML = '';
+
+            if (pickups.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--text-muted);">No pickups scheduled on campus.</td></tr>`;
+                return;
+            }
+
+            pickups.forEach(p => {
+                const tr = document.createElement('tr');
+                const dateStr = new Date(p.date_time).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+                
+                let actionHtml = '';
+                if (p.status === 'Pending') {
+                    actionHtml = `<button class="action-btn claim" onclick="updateStatus(${p.id}, 'Claimed')">Claim</button>`;
+                } else if (p.status === 'Claimed' && p.claimed_by === currentUser.id) {
+                    actionHtml = `<button class="action-btn complete" onclick="updateStatus(${p.id}, 'Completed')">Collect</button>`;
+                } else {
+                    actionHtml = `<span style="color:var(--text-muted);font-size:0.75rem;">Done</span>`;
+                }
+
+                tr.innerHTML = `
+                    <td><strong>${p.requester}</strong></td>
+                    <td>${p.waste_type}</td>
+                    <td>${p.block_name}</td>
+                    <td>${p.room_number}</td>
+                    <td>${dateStr}</td>
+                    <td><span class="status-badge ${p.status.toLowerCase()}">${p.status}</span></td>
+                    <td>${p.collector || 'Unassigned'}</td>
+                    <td>${actionHtml}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function clearMarkers() {
+            markers.forEach(m => mapObj.removeLayer(m));
+            markers = [];
+        }
+
+        function renderMapPins(pickups) {
+            clearMarkers();
+            
+            pickups.forEach(p => {
+                let blockLat = 10.8156;
+                let blockLng = 78.67336;
+
+                if (p.block_name === "Computer Science Block") { blockLat = 10.8159; blockLng = 78.6736; }
+                else if (p.block_name === "Admin Block") { blockLat = 10.8157; blockLng = 78.6728; }
+                else if (p.block_name === "Canteen Area") { blockLat = 10.8152; blockLng = 78.6731; }
+                else if (p.block_name === "Golden Jubilee Block") { blockLat = 10.8162; blockLng = 78.6732; }
+                else if (p.block_name === "Schwartz Hostel") { blockLat = 10.8148; blockLng = 78.6735; }
+                else if (p.block_name === "All Saints Hostel") { blockLat = 10.8149; blockLng = 78.6725; }
+                else if (p.block_name === "Library Block") { blockLat = 10.8160; blockLng = 78.6727; }
+
+                const latJitter = (Math.sin(p.id) * 0.0001);
+                const lngJitter = (Math.cos(p.id) * 0.0001);
+                const markerLat = blockLat + latJitter;
+                const markerLng = blockLng + lngJitter;
+
+                let color = "#f59e0b"; // Pending
+                if (p.status === "Claimed") color = "#3b82f6";
+                if (p.status === "Completed") color = "#10b981";
+
+                const customIcon = L.divIcon({
+                    className: 'custom-div-icon',
+                    html: `<div style="background-color:${color};width:14px;height:14px;border-radius:50%;border:2px solid white;box-shadow:0 0 8px rgba(0,0,0,0.5);"></div>`,
+                    iconSize: [14, 14],
+                    iconAnchor: [7, 7]
+                });
+
+                const marker = L.marker([markerLat, markerLng], { icon: customIcon }).addTo(mapObj);
+                
+                let popupHtml = `
+                    <div style="color:#0f172a; font-family:'Outfit';">
+                        <h4 style="margin-bottom:4px;">${p.waste_type}</h4>
+                        <p style="font-size:0.8rem;margin-bottom:2px;"><b>Requester:</b> ${p.requester}</p>
+                        <p style="font-size:0.8rem;margin-bottom:2px;"><b>Location:</b> ${p.block_name} (${p.room_number})</p>
+                        <p style="font-size:0.8rem;margin-bottom:2px;"><b>Collector:</b> ${p.collector || 'Unassigned'}</p>
+                        <p style="font-size:0.8rem;margin-bottom:8px;"><b>Status:</b> <span style="font-weight:700;color:${color}">${p.status}</span></p>
+                `;
+
+                if (p.status === "Pending") {
+                    popupHtml += `<button onclick="updateStatus(${p.id}, 'Claimed')" style="background:#3b82f6;color:white;border:none;padding:5px 10px;border-radius:5px;cursor:pointer;font-weight:600;width:100%;">Claim Run</button>`;
+                } else if (p.status === "Claimed" && p.claimed_by === currentUser.id) {
+                    popupHtml += `<button onclick="updateStatus(${p.id}, 'Completed')" style="background:#10b981;color:white;border:none;padding:5px 10px;border-radius:5px;cursor:pointer;font-weight:600;width:100%;">Mark Collected</button>`;
+                }
+                
+                popupHtml += `</div>`;
+                marker.bindPopup(popupHtml);
+                markers.push(marker);
+            });
+        }
+
+        function updateStatus(pickup_id, status) {
+            fetch(API_URL + "/api/pickups/claim", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    pickup_id: pickup_id,
+                    driver_id: currentUser.id,
+                    status: status
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    alert(data.message);
+                    if (status === 'Completed') {
+                        currentUser.points += 50;
+                        document.getElementById('collectorPoints').innerText = currentUser.points + " pts";
+                        localStorage.setItem('eco_user', JSON.stringify(currentUser));
+                    }
+                    mapObj.closePopup();
+                    loadPickups();
+                } else {
+                    alert("Error: " + data.error);
+                }
+            })
+            .catch(err => console.error("Error updating status:", err));
+        }
+    </script>
+</body>
+</html>

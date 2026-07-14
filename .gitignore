@@ -1,0 +1,8 @@
+venv/
+__pycache__/
+backend/__pycache__/
+*.pyc
+uploads/
+/tmp/
+.vscode/
+waste_sorting_codebase.zip

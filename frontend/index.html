@@ -1,0 +1,3399 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>EcoSort — AI-Powered Smart Green Portal</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="ecosort-logo.png">
+
+    <!-- Google Fonts & Icon Libraries -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Chart.js CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.js"></script>
+
+    <!-- Leaflet Map CSS & JS CDNs -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <style>
+        :root {
+            --bg-color: #030712;
+            --sidebar-bg: rgba(10, 15, 30, 0.7);
+            --card-bg: rgba(17, 24, 39, 0.45);
+            --border-color: rgba(229, 193, 88, 0.1);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+
+            --primary: #e5c158;
+            /* BHC Gold */
+            --primary-glow: rgba(229, 193, 88, 0.2);
+            --secondary: #1e40af;
+            /* BHC Royal Blue */
+            --secondary-glow: rgba(30, 64, 175, 0.2);
+            --accent: #f59e0b;
+            /* Amber */
+
+            --organic-color: #10b981;
+            --plastic-color: #3b82f6;
+            --paper-color: #60a5fa;
+            --metal-color: #ef4444;
+            --ewaste-color: #f59e0b;
+            --general-color: #6b7280;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Outfit', sans-serif;
+            transition: background-color 0.3s, border-color 0.3s, transform 0.2s, box-shadow 0.2s;
+        }
+
+        body {
+            background: radial-gradient(circle at center, rgba(3, 7, 18, 0.75) 0%, rgba(3, 7, 18, 0.95) 100%),
+                url('https://images.unsplash.com/photo-1518531933037-91b2f5f229cc?auto=format&fit=crop&w=1920&q=80') no-repeat center center fixed;
+            background-size: cover;
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        body::before {
+            content: "";
+            position: absolute;
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(229, 193, 88, 0.05) 0%, transparent 70%);
+            top: 5%;
+            right: 10%;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        body::after {
+            content: "";
+            position: absolute;
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, rgba(30, 64, 175, 0.05) 0%, transparent 70%);
+            bottom: 5%;
+            left: 5%;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        /* --- AUTH SCREEN --- */
+        .auth-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            overflow-y: auto;
+            width: 100vw;
+            height: 100vh;
+            padding: 40px 20px;
+            background: radial-gradient(circle at center, rgba(3, 7, 18, 0.75) 0%, rgba(3, 7, 18, 0.95) 100%),
+                url('https://images.unsplash.com/photo-1518531933037-91b2f5f229cc?auto=format&fit=crop&w=1920&q=80') no-repeat center center fixed;
+            background-size: cover;
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 1000;
+        }
+
+        .auth-card {
+            margin: auto;
+            background: rgba(15, 23, 42, 0.65);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--border-color);
+            padding: 40px;
+            border-radius: 24px;
+            width: 100%;
+            max-width: 420px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            text-align: center;
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .auth-logo {
+            font-size: 3rem;
+            color: var(--primary);
+            margin-bottom: 15px;
+            text-shadow: 0 0 20px var(--primary-glow);
+        }
+
+        .auth-card h2 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, #fff 30%, #94a3b8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .auth-subtitle {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            margin-bottom: 30px;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+            text-align: left;
+            position: relative;
+        }
+
+        .input-group i {
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            font-size: 1.1rem;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 14px 16px 14px 48px;
+            background: rgba(30, 41, 59, 0.5);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            color: #fff;
+            font-size: 1rem;
+            outline: none;
+            transition: all 0.3s;
+        }
+
+        .input-group input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 12px rgba(16, 185, 129, 0.2);
+            background: rgba(30, 41, 59, 0.8);
+        }
+
+        .auth-btn {
+            background: linear-gradient(135deg, var(--primary), #b5952c);
+            color: white;
+            font-weight: 600;
+            border: none;
+            padding: 14px;
+            width: 100%;
+            border-radius: 12px;
+            font-size: 1rem;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(229, 193, 88, 0.3);
+            margin-bottom: 20px;
+        }
+
+        .auth-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(229, 193, 88, 0.4);
+        }
+
+        .auth-toggle {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        .auth-toggle span {
+            color: var(--primary);
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        /* --- DASHBOARD CONTAINER LAYOUT --- */
+        .app-container {
+            display: none;
+            /* hidden until logged in */
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+        }
+
+        /* --- SIDEBAR --- */
+        .sidebar {
+            width: 260px;
+            background: var(--sidebar-bg);
+            border-right: 1px solid var(--border-color);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            display: flex;
+            flex-direction: column;
+            padding: 30px 20px;
+            z-index: 100;
+            box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3);
+        }
+
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 40px;
+            padding-left: 4px;
+        }
+
+        .logo-section .clg-logo {
+            height: 38px;
+            width: 38px;
+            object-fit: contain;
+            filter: drop-shadow(0 0 8px var(--primary-glow));
+        }
+
+        .auth-logo .clg-logo {
+            width: 70px;
+            height: 70px;
+            object-fit: contain;
+            filter: drop-shadow(0 0 15px var(--primary-glow));
+            margin: 0 auto 10px auto;
+            display: block;
+        }
+
+        .logo-title {
+            font-size: 1.3rem;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+            background: linear-gradient(135deg, #ffffff, #e5c158);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .nav-menu {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 12px 18px;
+            border-radius: 12px;
+            cursor: pointer;
+            color: var(--text-muted);
+            font-weight: 500;
+            font-size: 0.95rem;
+            border: 1px solid transparent;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .nav-item:hover {
+            color: #fff;
+            background: rgba(255, 255, 255, 0.04);
+            border-color: rgba(255, 255, 255, 0.05);
+            transform: translateX(3px);
+        }
+
+        .nav-item.active {
+            color: #fff;
+            background: rgba(229, 193, 88, 0.12);
+            border: 1px solid rgba(229, 193, 88, 0.2);
+            box-shadow: 0 4px 15px rgba(229, 193, 88, 0.05);
+        }
+
+        .nav-item i {
+            font-size: 1.1rem;
+            width: 20px;
+            text-align: center;
+        }
+
+        .user-profile-section {
+            margin-top: auto;
+            border-top: 1px solid var(--border-color);
+            padding-top: 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 700;
+            box-shadow: 0 4px 12px rgba(229, 193, 88, 0.2);
+        }
+
+        .user-info {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .username-display {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #fff;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .user-tier {
+            font-size: 0.75rem;
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        .logout-btn {
+            background: none;
+            border: none;
+            color: #ef4444;
+            cursor: pointer;
+            font-size: 1.1rem;
+            margin-left: auto;
+            padding: 8px;
+            border-radius: 50%;
+            transition: all 0.2s;
+        }
+
+        .logout-btn:hover {
+            background: rgba(239, 68, 68, 0.1);
+            transform: scale(1.1);
+        }
+
+        /* --- MAIN CONTENT AREA --- */
+        .main-content {
+            flex: 1;
+            padding: 40px;
+            overflow-y: auto;
+            background: transparent;
+            z-index: 2;
+        }
+
+        .tab-panel {
+            display: none;
+            animation: fadeIn 0.4s ease-out;
+        }
+
+        .tab-panel.active {
+            display: block;
+        }
+
+        .header-summary {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 35px;
+        }
+
+        .header-title h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        .header-title p {
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        /* --- STATS COUNTERS --- */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
+            margin-bottom: 35px;
+        }
+
+        .stat-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            padding: 24px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .stat-card:hover {
+            transform: translateY(-4px);
+            border-color: rgba(229, 193, 88, 0.2);
+            box-shadow: 0 12px 24px rgba(229, 193, 88, 0.05), 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: var(--stat-theme, var(--primary));
+        }
+
+        .stat-icon {
+            width: 52px;
+            height: 52px;
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+            color: var(--stat-theme, var(--primary));
+            transition: all 0.3s;
+        }
+
+        .stat-card:hover .stat-icon {
+            transform: scale(1.1) rotate(5deg);
+            background: rgba(229, 193, 88, 0.05);
+        }
+
+        .stat-details h3 {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+        }
+
+        .stat-details p {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        /* --- DASHBOARD WIDGETS --- */
+        .dashboard-row {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 25px;
+            margin-bottom: 35px;
+        }
+
+        @media (max-width: 1024px) {
+            .dashboard-row {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .widget {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 24px;
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .widget:hover {
+            border-color: rgba(229, 193, 88, 0.18);
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3);
+        }
+
+        .widget-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        /* --- SCANNER SCREEN --- */
+        .scanner-layout {
+            display: grid;
+            grid-template-columns: 1.2fr 1fr;
+            gap: 30px;
+        }
+
+        @media (max-width: 900px) {
+            .scanner-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .dropzone-container {
+            background: rgba(30, 41, 59, 0.2);
+            border: 2px dashed rgba(255, 255, 255, 0.15);
+            border-radius: 20px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            position: relative;
+            min-height: 380px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            transition: all 0.3s;
+        }
+
+        .dropzone-container:hover {
+            border-color: var(--primary);
+            background: rgba(16, 185, 129, 0.03);
+        }
+
+        .dropzone-container.dragging {
+            border-color: var(--secondary);
+            background: rgba(59, 130, 246, 0.05);
+        }
+
+        .upload-icon {
+            font-size: 3.5rem;
+            color: var(--text-muted);
+            margin-bottom: 15px;
+        }
+
+        .preview-img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: 5;
+        }
+
+        .scan-laser {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(to right, transparent, var(--primary), transparent);
+            box-shadow: 0 0 15px var(--primary);
+            z-index: 10;
+            animation: laserScan 2.5s infinite linear;
+            display: none;
+        }
+
+        @keyframes laserScan {
+            0% {
+                top: 0%;
+            }
+
+            50% {
+                top: 100%;
+            }
+
+            100% {
+                top: 0%;
+            }
+        }
+
+        .results-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .result-placeholder {
+            text-align: center;
+            color: var(--text-muted);
+            padding: 40px 0;
+        }
+
+        .result-placeholder i {
+            font-size: 3rem;
+            margin-bottom: 15px;
+        }
+
+        .result-details {
+            display: none;
+        }
+
+        .detected-item-header {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .confidence-pill {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-bottom: 20px;
+        }
+
+        .bin-alert-box {
+            padding: 16px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+
+        .bin-alert-box.green {
+            background: rgba(16, 185, 129, 0.15);
+            border: 1px solid rgba(16, 185, 129, 0.25);
+            color: var(--organic-color);
+        }
+
+        .bin-alert-box.blue {
+            background: rgba(59, 130, 246, 0.15);
+            border: 1px solid rgba(59, 130, 246, 0.25);
+            color: var(--plastic-color);
+        }
+
+        .bin-alert-box.red {
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.25);
+            color: var(--metal-color);
+        }
+
+        .bin-alert-box.orange {
+            background: rgba(245, 158, 11, 0.15);
+            border: 1px solid rgba(245, 158, 11, 0.25);
+            color: var(--ewaste-color);
+        }
+
+        .bin-alert-box.gray {
+            background: rgba(107, 114, 128, 0.15);
+            border: 1px solid rgba(107, 114, 128, 0.25);
+            color: var(--general-color);
+        }
+
+        .reward-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 10px;
+        }
+
+        .reward-pill {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-color);
+            padding: 12px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .reward-pill h4 {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            margin-bottom: 2px;
+        }
+
+        .reward-pill p {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        /* --- PICKUPS PORTAL & DRIVER CLAIM --- */
+        .pickups-layout {
+            display: grid;
+            grid-template-columns: 1fr 1.2fr;
+            gap: 30px;
+            height: calc(100vh - 160px);
+        }
+
+        .pickups-form-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        .form-group {
+            margin-bottom: 18px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+            font-weight: 500;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            background: rgba(30, 41, 59, 0.5);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 12px;
+            color: #fff;
+            font-size: 0.95rem;
+            outline: none;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            border-color: var(--primary);
+        }
+
+        .scheduler-btn {
+            background: linear-gradient(135deg, var(--secondary), #2563eb);
+            color: white;
+            font-weight: 600;
+            border: none;
+            padding: 14px;
+            border-radius: 12px;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);
+            margin-top: 10px;
+        }
+
+        .scheduler-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(59, 130, 246, 0.35);
+        }
+
+        /* --- MAP & COLLECTOR --- */
+        .map-section {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        #pickupMap,
+        #hubsMap {
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+        }
+
+        .collector-toggle-bar {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(8px);
+            border: 1px solid var(--border-color);
+            padding: 10px 18px;
+            border-radius: 30px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            z-index: 100;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 46px;
+            height: 24px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #334155;
+            transition: .3s;
+            border-radius: 24px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+        }
+
+        input:checked+.slider {
+            background-color: var(--primary);
+        }
+
+        input:checked+.slider:before {
+            transform: translateX(22px);
+        }
+
+        /* --- LEADERBOARD & LOG TABLES --- */
+        .leaderboard-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .leaderboard-item {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border-color);
+            padding: 16px 20px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .leaderboard-item.top-three {
+            background: rgba(16, 185, 129, 0.05);
+            border-color: rgba(16, 185, 129, 0.15);
+        }
+
+        .rank-number {
+            font-size: 1.4rem;
+            font-weight: 800;
+            width: 35px;
+            color: var(--text-muted);
+        }
+
+        .top-three .rank-number {
+            color: var(--primary);
+        }
+
+        .leaderboard-user {
+            font-weight: 600;
+            font-size: 1.05rem;
+        }
+
+        .leaderboard-score {
+            margin-left: auto;
+            text-align: right;
+        }
+
+        .leaderboard-score p {
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .leaderboard-score span {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        /* --- LOG TABLE STYLE --- */
+        .activity-table-wrapper {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+
+        th {
+            padding: 12px 16px;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid var(--border-color);
+            font-weight: 600;
+        }
+
+        td {
+            padding: 16px;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 0.9rem;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        .log-category-pill {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .log-category-pill.organic {
+            background: rgba(16, 185, 129, 0.12);
+            color: var(--organic-color);
+        }
+
+        .log-category-pill.plastic {
+            background: rgba(59, 130, 246, 0.12);
+            color: var(--plastic-color);
+        }
+
+        .log-category-pill.paper {
+            background: rgba(96, 165, 250, 0.12);
+            color: var(--paper-color);
+        }
+
+        .log-category-pill.metal {
+            background: rgba(239, 68, 68, 0.12);
+            color: var(--metal-color);
+        }
+
+        .log-category-pill.ewaste {
+            background: rgba(245, 158, 11, 0.12);
+            color: var(--ewaste-color);
+        }
+
+        .log-category-pill.general {
+            background: rgba(107, 114, 128, 0.12);
+            color: var(--general-color);
+        }
+
+        .pickup-list-wrapper {
+            margin-top: 15px;
+            max-height: 200px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .pickup-item-mini {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border-color);
+            padding: 12px;
+            border-radius: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.85rem;
+        }
+
+        .status-badge {
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .status-badge.pending {
+            background: rgba(245, 158, 11, 0.15);
+            color: var(--accent);
+        }
+
+        .status-badge.claimed {
+            background: rgba(59, 130, 246, 0.15);
+            color: var(--secondary);
+        }
+
+        .status-badge.completed {
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--primary);
+        }
+
+        /* Custom scrollbar for webkit */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.25);
+        }
+
+        /* Profile Page Styles */
+        .profile-layout {
+            animation: fadeIn 0.4s ease-out;
+        }
+
+        .profile-avatar-container {
+            position: relative;
+            transition: border-color 0.3s;
+        }
+
+        .profile-avatar-container:hover {
+            border-color: var(--primary) !important;
+        }
+
+        .profile-avatar-container:hover .avatar-upload-overlay {
+            opacity: 1 !important;
+        }
+
+        @media (max-width: 768px) {
+            .profile-layout {
+                grid-template-columns: 1fr !important;
+            }
+        }
+
+        /* Premium Hover Effects */
+        .widget a,
+        .widget button,
+        .nav-item,
+        .auth-btn,
+        .scheduler-btn,
+        .btn,
+        .leaderboard-item {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .widget a:hover,
+        .leaderboard-item:hover {
+            transform: translateY(-3px) scale(1.015);
+            border-color: var(--primary) !important;
+            box-shadow: 0 8px 20px rgba(229, 193, 88, 0.08), 0 4px 10px rgba(0, 0, 0, 0.3);
+            background: rgba(229, 193, 88, 0.03) !important;
+        }
+
+        input:hover,
+        select:hover,
+        textarea:hover {
+            border-color: rgba(229, 193, 88, 0.3) !important;
+            background: rgba(30, 41, 59, 0.6) !important;
+        }
+
+        .nav-item:hover {
+            border-color: rgba(229, 193, 88, 0.15) !important;
+            box-shadow: 0 4px 12px rgba(229, 193, 88, 0.03);
+        }
+
+        /* Modal and communications popup styles */
+        @keyframes slideIn {
+            from {
+                transform: translateY(100px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes pulse {
+            from {
+                opacity: 0.6;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(8px);
+        }
+
+        /* Timetable grid styling for ERP */
+        .timetable-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            color: #fff;
+            font-size: 0.85rem;
+        }
+
+        .timetable-table th,
+        .timetable-table td {
+            border: 1px solid var(--border-color);
+            padding: 10px 12px;
+            text-align: left;
+        }
+
+        .timetable-table th {
+            background: rgba(229, 193, 88, 0.08);
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .timetable-table tr:hover {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        /* Subject attendance progress styling */
+        .attendance-item {
+            margin-bottom: 16px;
+        }
+
+        .attendance-info {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            margin-bottom: 6px;
+        }
+
+        .progress-bar-bg {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            height: 8px;
+            overflow: hidden;
+            width: 100%;
+            border: 1px solid rgba(255, 255, 255, 0.02);
+        }
+
+        .progress-bar-fill {
+            background: linear-gradient(90deg, var(--primary), var(--organic-color));
+            height: 100%;
+            border-radius: 8px;
+            transition: width 0.5s ease-out;
+        }
+
+        /* Fees Payment invoice list */
+        .fee-card {
+            background: rgba(17, 24, 39, 0.3);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 16px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .fee-card:hover {
+            transform: translateY(-2px);
+            border-color: rgba(229, 193, 88, 0.3) !important;
+            box-shadow: 0 6px 15px rgba(229, 193, 88, 0.03);
+        }
+
+        .fee-status {
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 20px;
+            text-transform: uppercase;
+        }
+
+        .fee-status.pending {
+            background: rgba(245, 158, 11, 0.15);
+            color: #f59e0b;
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+
+        .fee-status.paid {
+            background: rgba(16, 185, 129, 0.15);
+            color: #10b981;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        /* Payment gateway dialog */
+        .payment-gateway-dialog {
+            background: rgba(15, 23, 42, 0.95);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            width: 100%;
+            max-width: 400px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(10px);
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- AUTHENTICATION VIEW -->
+    <div class="auth-container" id="authView">
+        <div class="auth-card">
+            <div class="auth-logo">
+                <img src="ecosort-logo.png" class="clg-logo" alt="BHC Logo">
+            </div>
+            <h2 id="authTitle">Create Account</h2>
+            <div class="auth-subtitle" id="authSubtitle">Join the BHC green community and earn points</div>
+
+            <div class="input-group">
+                <i class="fa-solid fa-user"></i>
+                <input type="text" id="authUsername" placeholder="Enter Username">
+            </div>
+
+            <div class="input-group">
+                <i class="fa-solid fa-lock"></i>
+                <input type="password" id="authPassword" placeholder="Enter Password">
+            </div>
+
+            <!-- Forgot Password trigger link (Only visible in Login Mode) -->
+            <div id="forgotPasswordLinkContainer"
+                style="display: none; text-align: right; margin-top: -10px; margin-bottom: 20px;">
+                <span onclick="openForgotPasswordModal()"
+                    style="color: var(--primary); font-size: 0.85rem; cursor: pointer; text-decoration: underline; transition: color 0.2s;">Forgot
+                    Password?</span>
+            </div>
+
+            <!-- Extended Register Fields Group (Visible only in Register Mode) -->
+            <div id="regExtraFieldsGroup" style="display: block;">
+                <div class="input-group">
+                    <i class="fa-solid fa-id-card"></i>
+                    <input type="text" id="authRegNo" placeholder="Enter Registration Number (e.g. 211105001)">
+                </div>
+
+                <div class="input-group">
+                    <i class="fa-solid fa-phone"></i>
+                    <input type="text" id="authPhone" placeholder="Enter Phone Number">
+                </div>
+
+                <div class="input-group">
+                    <i class="fa-solid fa-envelope"></i>
+                    <input type="email" id="authEmail" placeholder="Enter Email Address">
+                </div>
+
+                <div class="input-group">
+                    <i class="fa-solid fa-chalkboard-user"></i>
+                    <input type="text" id="authClass" placeholder="Enter Class (e.g. B.Sc. CS)">
+                </div>
+
+                <div style="display: flex; gap: 15px; margin-bottom: 20px;">
+                    <div class="input-group" style="flex: 1; margin-bottom: 0;">
+                        <i class="fa-solid fa-users-rectangle"></i>
+                        <input type="text" id="authSection" placeholder="Section (e.g. A)">
+                    </div>
+                    <div style="flex: 1; text-align: left;">
+                        <select id="authShift"
+                            style="width:100%; background: rgba(30, 41, 59, 0.5); border: 1px solid var(--border-color); border-radius: 12px; padding: 12px 16px; color:#fff; outline:none; font-family:'Outfit'; font-size:0.9rem; height: 100%;">
+                            <option value="Shift I">Shift I (Aided)</option>
+                            <option value="Shift II">Shift II (Self-Financed)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- College Custom Dropdowns (Visible in Register Mode) -->
+            <div class="form-group" id="regDeptGroup" style="text-align: left; margin-bottom: 20px;">
+                <label style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 5px;"><i
+                        class="fa-solid fa-graduation-cap"></i> Department / Branch</label>
+                <select id="authDepartment"
+                    style="width:100%; background: rgba(30, 41, 59, 0.5); border: 1px solid var(--border-color); border-radius: 12px; padding: 12px 16px; color:#fff; outline:none;">
+                    <optgroup label="Arts & Humanities">
+                        <option value="Commerce">Commerce</option>
+                        <option value="Economics">Economics</option>
+                        <option value="English">English</option>
+                        <option value="History">History</option>
+                        <option value="Management Studies">Management Studies</option>
+                        <option value="Social Work">Social Work</option>
+                        <option value="Tamil">Tamil</option>
+                    </optgroup>
+                    <optgroup label="Science">
+                        <option value="Actuarial Science">Actuarial Science</option>
+                        <option value="Aviation">Aviation</option>
+                        <option value="Bioinformatics">Bioinformatics</option>
+                        <option value="Biotechnology">Biotechnology</option>
+                        <option value="Botany">Botany</option>
+                        <option value="Chemistry">Chemistry</option>
+                        <option value="Computer Application">Computer Application</option>
+                        <option value="Computer Science">Computer Science</option>
+                        <option value="Data Science">Data Science</option>
+                        <option value="Environmental Sciences">Environmental Sciences</option>
+                        <option value="Information Technology">Information Technology</option>
+                        <option value="Library & Inf. Science">Library & Inf. Science</option>
+                        <option value="Mathematics">Mathematics</option>
+                        <option value="Nutrition & Dietetics">Nutrition & Dietetics</option>
+                        <option value="Physics">Physics</option>
+                        <option value="Visual Communication">Visual Communication</option>
+                        <option value="Zoology">Zoology</option>
+                    </optgroup>
+                </select>
+            </div>
+
+            <div class="form-group" id="regHostelGroup" style="text-align: left; margin-bottom: 25px;">
+                <label style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 5px;"><i
+                        class="fa-solid fa-hotel"></i> Hostel Residence</label>
+                <select id="authHostel"
+                    style="width:100%; background: rgba(30, 41, 59, 0.5); border: 1px solid var(--border-color); border-radius: 12px; padding: 12px 16px; color:#fff; outline:none;">
+                    <option value="Schwartz Hostel">Schwartz Hostel (Boys)</option>
+                    <option value="Gardiner Hostel">Gardiner Hostel (Boys)</option>
+                    <option value="Dodson Hostel">Dodson Hostel (Boys)</option>
+                    <option value="Launder Hostel">Launder Hostel (Boys)</option>
+                    <option value="Vestry Hostel">Vestry Hostel (Boys)</option>
+                    <option value="All Saints Hostel">All Saints Hostel (Girls)</option>
+                    <option value="Bishop Solomon Doraiswamy Hostel">Doraiswamy Hostel (Girls)</option>
+                    <option value="Bishop Thorp Hostel">Thorp Hostel (Girls)</option>
+                    <option value="Margaret Addicott Hostel">Addicott Hostel (Girls)</option>
+                    <option value="Day Scholar">Day Scholar (Non-Hosteler)</option>
+                </select>
+            </div>
+
+            <button class="auth-btn" id="authSubmitBtn" onclick="submitAuth()">Register</button>
+
+            <div class="auth-toggle" id="authToggleText">
+                Already have an account? <span onclick="toggleAuthMode()">Sign In</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN APP CONTAINER -->
+    <div class="app-container" id="appView">
+
+        <!-- SIDEBAR -->
+        <aside class="sidebar">
+            <div class="logo-section">
+                <img src="ecosort-logo.png" class="clg-logo" alt="BHC Logo">
+                <span class="logo-title">BHC EcoSort</span>
+            </div>
+
+            <ul class="nav-menu">
+                <li class="nav-item active" onclick="switchTab('dashboard', this)">
+                    <i class="fa-solid fa-chart-pie"></i> Dashboard
+                </li>
+                <li class="nav-item" onclick="switchTab('scanner', this)">
+                    <i class="fa-solid fa-expand"></i> AI Scanner
+                </li>
+                <li class="nav-item" onclick="switchTab('pickups', this); initPickupMap();">
+                    <i class="fa-solid fa-truck-ramp-box"></i> Campus Pickups
+                </li>
+                <li class="nav-item" onclick="switchTab('hubs', this); initHubsMap();">
+                    <i class="fa-solid fa-map-location-dot"></i> Campus Bins
+                </li>
+                <li class="nav-item" onclick="switchTab('guide', this)">
+                    <i class="fa-solid fa-book-open"></i> Recycling Guide
+                </li>
+                <li class="nav-item" onclick="switchTab('leaderboard', this)">
+                    <i class="fa-solid fa-ranking-star"></i> Leaderboard
+                </li>
+                <li class="nav-item" id="navProfileLink" onclick="switchTab('profile', this)">
+                    <i class="fa-solid fa-user-gear"></i> My Profile
+                </li>
+                <li class="nav-item" id="navAdminLink" style="display:none; color: var(--primary); font-weight:700;"
+                    onclick="window.location.href='admin.html'">
+                    <i class="fa-solid fa-lock"></i> Admin Panel
+                </li>
+                <li class="nav-item" id="navCollectorLink" style="display:none; color: var(--primary); font-weight:700;"
+                    onclick="window.location.href='collector.html'">
+                    <i class="fa-solid fa-truck-ramp-box"></i> Collector Panel
+                </li>
+
+
+            </ul>
+
+            <div class="user-profile-section" style="cursor: pointer;"
+                onclick="switchTab('profile', document.getElementById('navProfileLink'))">
+                <div
+                    style="position: relative; width: 40px; height: 40px; border-radius: 50%; overflow: hidden; flex-shrink: 0; box-shadow: 0 4px 12px rgba(229, 193, 88, 0.2);">
+                    <img id="avatarImage" src="" style="width: 100%; height: 100%; object-fit: cover; display: none;">
+                    <div id="avatarLetter" class="avatar"
+                        style="width: 100%; height: 100%; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; color: white; background: linear-gradient(135deg, var(--primary), var(--secondary));">
+                        U</div>
+                </div>
+                <div class="user-info">
+                    <span class="username-display" id="profileUsername">Username</span>
+                    <span class="user-tier" id="profileTier">Eco Rookie</span>
+                </div>
+                <button class="logout-btn" onclick="event.stopPropagation(); logout()" title="Logout">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                </button>
+            </div>
+        </aside>
+
+        <!-- MAIN WINDOW -->
+        <main class="main-content">
+
+            <!-- TAB: DASHBOARD -->
+            <div class="tab-panel active" id="dashboardTab">
+                <div class="header-summary">
+                    <div class="header-title">
+                        <h1>Bishop Heber College EcoSort</h1>
+                        <p>Welcome back, <span id="dashWelcomeName"
+                                style="color: var(--primary); font-weight:700;">User</span>! Keep your campus clean and
+                            green.</p>
+                    </div>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon"><i class="fa-solid fa-coins"></i></div>
+                        <div class="stat-details">
+                            <h3>Eco Points</h3>
+                            <p id="statPoints">0</p>
+                        </div>
+                    </div>
+                    <div class="stat-card" style="--stat-theme: #10b981;">
+                        <div class="stat-icon"><i class="fa-solid fa-leaf"></i></div>
+                        <div class="stat-details">
+                            <h3>CO2 Saved</h3>
+                            <p><span id="statCO2">0.0</span> kg</p>
+                        </div>
+                    </div>
+                    <div class="stat-card" style="--stat-theme: #3b82f6;">
+                        <div class="stat-icon"><i class="fa-solid fa-box-archive"></i></div>
+                        <div class="stat-details">
+                            <h3>Items Scanned</h3>
+                            <p id="statSorted">0</p>
+                        </div>
+                    </div>
+                    <div class="stat-card" style="--stat-theme: #f59e0b;">
+                        <div class="stat-icon"><i class="fa-solid fa-medal"></i></div>
+                        <div class="stat-details">
+                            <h3>Rank</h3>
+                            <p id="statRank">#--</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="dashboard-row">
+                    <div class="widget">
+                        <div class="widget-title">Recycling Statistics</div>
+                        <canvas id="recyclingChart" style="max-height: 280px;"></canvas>
+                    </div>
+                    <div class="widget">
+                        <div class="widget-title">Branch & Hostel Details</div>
+                        <div style="display: flex; flex-direction: column; gap: 18px; margin-top: 15px;">
+                            <div style="display: flex; align-items: center; gap: 15px;">
+                                <i class="fa-solid fa-graduation-cap"
+                                    style="font-size: 1.8rem; color: var(--secondary);"></i>
+                                <div>
+                                    <h4 style="font-size: 0.9rem;">Department</h4>
+                                    <p style="font-size: 0.85rem; color: var(--text-muted);">
+                                        <span id="userDisplayDept">Computer Science</span>
+                                        <br>
+                                        <small id="userDisplayDeptLoc"
+                                            style="color: var(--primary); font-weight: 500;">Computer Science Block,
+                                            First Floor</small>
+                                    </p>
+                                </div>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 15px;">
+                                <i class="fa-solid fa-hotel" style="font-size: 1.8rem; color: var(--accent);"></i>
+                                <div>
+                                    <h4 style="font-size: 0.9rem;">Residence</h4>
+                                    <p style="font-size: 0.85rem; color: var(--text-muted);" id="userDisplayHostel">
+                                        Schwartz Hostel</p>
+                                </div>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 15px;">
+                                <i class="fa-solid fa-circle-check"
+                                    style="font-size: 1.8rem; color: var(--primary);"></i>
+                                <div>
+                                    <h4 style="font-size: 0.9rem;">Status</h4>
+                                    <p style="font-size: 0.85rem; color: var(--text-muted);">Verified BHC Student</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="dashboard-row" style="grid-template-columns: 1.2fr 1fr; margin-top: 25px;">
+                    <div class="widget">
+                        <div class="widget-title"><i class="fa-solid fa-bullhorn"
+                                style="color: var(--primary); margin-right: 8px;"></i> BHC Green Announcements</div>
+                        <div style="display: flex; flex-direction: column; gap: 15px; margin-top: 15px;">
+                            <div
+                                style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); padding: 12px 16px; border-radius: 12px;">
+                                <div
+                                    style="display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 0.8rem; color: var(--primary); font-weight: 600;">
+                                    <span>CAMPUS DRIVE</span>
+                                    <span>June 28, 2026</span>
+                                </div>
+                                <h4 style="font-size: 0.95rem; margin-bottom: 4px; color: #fff;">Plastic Waste
+                                    Collection Drive</h4>
+                                <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.4;">Earn 2x
+                                    points for scanning and dropping plastic bottles at the Schwartz Hostel recycling
+                                    hub this weekend.</p>
+                            </div>
+                            <div
+                                style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); padding: 12px 16px; border-radius: 12px;">
+                                <div
+                                    style="display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 0.8rem; color: #10b981; font-weight: 600;">
+                                    <span>NEW FACILITY</span>
+                                    <span>June 22, 2026</span>
+                                </div>
+                                <h4 style="font-size: 0.95rem; margin-bottom: 4px; color: #fff;">Organic Compost Pit
+                                    Activated</h4>
+                                <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.4;">A new compost
+                                    facility is now active next to the Main Canteen. Drop leaf plates and food scraps
+                                    directly to boost branch shield scores!</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="widget">
+                        <div class="widget-title"><i class="fa-solid fa-link"
+                                style="color: var(--secondary); margin-right: 8px;"></i> Bishop Heber Quick Links</div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 15px;">
+                            <a href="https://bhc.edu.in" target="_blank"
+                                style="text-decoration: none; background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); padding: 16px; border-radius: 12px; text-align: center; color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; transition: transform 0.2s;">
+                                <i class="fa-solid fa-graduation-cap"
+                                    style="font-size: 1.5rem; color: var(--primary);"></i>
+                                <span style="font-size: 0.85rem; font-weight: 600;">Official BHC Site</span>
+                            </a>
+                            <a href="https://bhc.edu.in/ERP" target="_blank"
+                                style="text-decoration: none; background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); padding: 16px; border-radius: 12px; text-align: center; color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; transition: transform 0.2s;">
+                                <i class="fa-solid fa-server" style="font-size: 1.5rem; color: var(--secondary);"></i>
+                                <span style="font-size: 0.85rem; font-weight: 600;">Heber ERP Portal</span>
+                            </a>
+                            <a href="https://bhc.edu.in/Library" target="_blank"
+                                style="text-decoration: none; background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); padding: 16px; border-radius: 12px; text-align: center; color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; transition: transform 0.2s;">
+                                <i class="fa-solid fa-book" style="font-size: 1.5rem; color: #10b981;"></i>
+                                <span style="font-size: 0.85rem; font-weight: 600;">Student Library</span>
+                            </a>
+                            <a href="https://bhc.edu.in/online_payment" target="_blank"
+                                style="text-decoration: none; background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); padding: 16px; border-radius: 12px; text-align: center; color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; transition: transform 0.2s;">
+                                <i class="fa-solid fa-credit-card" style="font-size: 1.5rem; color: #ef4444;"></i>
+                                <span style="font-size: 0.85rem; font-weight: 600;">Fees Payment</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="widget" style="margin-top: 25px;">
+                    <div class="widget-title">Campus Activity Feed</div>
+                    <div class="activity-table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Student</th>
+                                    <th>Item Name</th>
+                                    <th>Category</th>
+                                    <th>Points</th>
+                                    <th>CO₂ Saved</th>
+                                    <th>Time</th>
+                                </tr>
+                            </thead>
+                            <tbody id="recentActivityRows">
+                                <!-- Dynamic rows -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: SCANNER -->
+            <div class="tab-panel" id="scannerTab">
+                <div class="header-summary">
+                    <div class="header-title">
+                        <h1>AI Campus Scanner</h1>
+                        <p>Upload an image or use your device camera to classify waste and earn points</p>
+                    </div>
+                </div>
+
+                <!-- Toggle Scanning Mode (Camera / File) -->
+                <div style="display: flex; gap: 15px; margin-bottom: 20px; max-width: 480px;">
+                    <button class="scheduler-btn"
+                        style="flex: 1; margin: 0; background: var(--secondary); display: flex; align-items: center; justify-content: center; gap: 8px;"
+                        id="btnUploadMode" onclick="setScanMode('upload')">
+                        <i class="fa-solid fa-file-arrow-up"></i> File Upload
+                    </button>
+                    <button class="scheduler-btn"
+                        style="flex: 1; margin: 0; background: rgba(255,255,255,0.05); color: var(--text-muted); border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: center; gap: 8px;"
+                        id="btnCameraMode" onclick="setScanMode('camera')">
+                        <i class="fa-solid fa-camera"></i> Live Camera
+                    </button>
+                </div>
+
+                <div class="scanner-layout">
+                    <div>
+                        <div class="dropzone-container" id="dropzone" onclick="triggerFileSelect()">
+                            <div class="scan-laser" id="laserLine"></div>
+                            <img src="" id="uploadPreview" class="preview-img" style="display: none;">
+                            <video id="cameraStream"
+                                style="position: absolute; top:0; left:0; width:100%; height:100%; object-fit:cover; display:none; z-index:4;"
+                                autoplay playsinline></video>
+                            <div id="dropzonePrompt">
+                                <div class="upload-icon"><i class="fa-solid fa-cloud-arrow-up"></i></div>
+                                <h3>Drag & Drop Image here</h3>
+                                <p style="color: var(--text-muted); margin-top: 8px; font-size: 0.85rem;">or click to
+                                    browse from device</p>
+                            </div>
+                            <button id="btnCapture" onclick="captureAndScan()"
+                                style="position: absolute; bottom: 20px; z-index: 10; display: none; background: var(--primary); border: none; color: white; padding: 12px 24px; border-radius: 30px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 15px rgba(16,185,129,0.4); font-family:'Outfit'; font-size:0.95rem; transition: transform 0.2s;"><i
+                                    class="fa-solid fa-circle-dot"></i> Capture & Scan</button>
+                        </div>
+                        <input type="file" id="fileInput" accept="image/*" style="display: none;"
+                            onchange="handleFileChange(event)">
+                        <canvas id="captureCanvas" style="display: none;"></canvas>
+                    </div>
+
+                    <div class="results-card">
+                        <div class="result-placeholder" id="resPlaceholder">
+                            <i class="fa-solid fa-microchip"></i>
+                            <h3>Awaiting Scan...</h3>
+                            <p>Upload an image of college waste (bottles, papers, e-waste) on the left.</p>
+                        </div>
+
+                        <div class="result-details" id="resDetails">
+                            <div class="detected-item-header" id="resItemName">Water Bottle</div>
+                            <span class="confidence-pill" id="resConfidence">Confidence: 94.5%</span>
+
+                            <div class="bin-alert-box blue" id="resBinBox">
+                                <i class="fa-solid fa-trash-can" style="font-size: 1.5rem;"></i>
+                                <span id="resBinText">Blue Bin (Recyclables)</span>
+                            </div>
+
+                            <h4 style="font-size: 0.95rem; margin-bottom: 8px;">Disposal Advisory</h4>
+                            <p style="color: var(--text-muted); font-size: 0.85rem; line-height: 1.4; margin-bottom: 20px;"
+                                id="resAdvisory">
+                                Rinse thoroughly to remove residues. Empty caps and labels can remain attached. Crush to
+                                save bin space.
+                            </p>
+
+                            <div class="reward-grid">
+                                <div class="reward-pill">
+                                    <h4>Points Earned</h4>
+                                    <p id="resPoints">+10</p>
+                                </div>
+                                <div class="reward-pill" style="border-color: rgba(16, 185, 129, 0.15);">
+                                    <h4>Carbon Offset</h4>
+                                    <p id="resCO2">1.2 kg</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: SCHEDULE PICKUPS -->
+            <div class="tab-panel" id="pickupsTab">
+                <div class="header-summary">
+                    <div class="header-title">
+                        <h1>Campus Pickup Scheduler</h1>
+                        <p>Schedule a waste collector to pick up bulk recycling or hazardous e-waste from labs/dorm
+                            blocks</p>
+                    </div>
+                </div>
+
+                <div class="pickups-layout">
+                    <div class="pickups-form-card">
+                        <div style="font-weight: 600; font-size: 1.1rem; margin-bottom: 15px;">Book a Collection</div>
+
+                        <div class="form-group">
+                            <label>Waste Material Type</label>
+                            <select id="pickupType">
+                                <option value="E-Waste / Old Lab Gear">E-Waste / Old Lab Gear (+25 pts)</option>
+                                <option value="Hostel Plastics & Bottles">Hostel Plastics & Bottles (+15 pts)</option>
+                                <option value="Metal Cans & Scrap">Metal Cans & Scrap (+15 pts)</option>
+                                <option value="Department Papers & Cardboard">Department Papers & Cardboard (+10 pts)
+                                </option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Campus Location (Block / Building)</label>
+                            <select id="pickupBlock">
+                                <option value="Computer Science Block">Computer Science Block</option>
+                                <option value="Admin Block">Admin Block</option>
+                                <option value="Canteen Area">Main Canteen</option>
+                                <option value="Golden Jubilee Block">Golden Jubilee Block</option>
+                                <option value="Schwartz Hostel">Schwartz Hostel</option>
+                                <option value="All Saints Hostel">All Saints Hostel</option>
+                                <option value="Library Block">Library Block</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Room / Lab / Apartment Number</label>
+                            <input type="text" id="pickupRoom" placeholder="e.g. CS Lab 204 or Room 14">
+                        </div>
+                        <div class="form-group">
+                            <label>Preferred Date & Time</label>
+                            <input type="datetime-local" id="pickupDateTime">
+                        </div>
+
+                        <button class="scheduler-btn" onclick="submitPickup()">Book Campus Pickup</button>
+
+                        <div style="font-weight: 600; font-size: 1rem; margin-top: 30px; margin-bottom: 10px;">Your
+                            Scheduled Bookings</div>
+                        <div class="pickup-list-wrapper" id="myPickupsList">
+                            <!-- Dynamic bookings list -->
+                        </div>
+                    </div>
+
+                    <div class="map-section">
+                        <div class="collector-toggle-bar">
+                            <span>Collector / Driver Mode</span>
+                            <label class="switch">
+                                <input type="checkbox" id="driverModeToggle" onchange="toggleDriverMode(this)">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                        <div id="pickupMap"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: RECYCLING HUBS -->
+            <div class="tab-panel" id="hubsTab">
+                <div class="header-summary">
+                    <div class="header-title">
+                        <h1>Campus Green Bins & Recycling Centers</h1>
+                        <p>Locate sorting bins, e-waste repositories, and compost pits across Bishop Heber campus</p>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 2.5fr; gap: 25px; height: calc(100vh - 160px);">
+                    <div class="widget" style="display: flex; flex-direction: column; overflow-y: auto;">
+                        <div class="widget-title">Campus Locations</div>
+                        <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 15px;" id="hubsList">
+                            <!-- Dynamic listing of hubs -->
+                        </div>
+                    </div>
+                    <div class="map-section">
+                        <div id="hubsMap"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: RECYCLING GUIDE -->
+            <div class="tab-panel" id="guideTab">
+                <div class="header-summary">
+                    <div class="header-title">
+                        <h1>BHC Recycling Guide</h1>
+                        <p>Search and browse common campus waste items to know where they belong, what points you earn,
+                            and carbon offsets.</p>
+                    </div>
+                </div>
+
+                <div class="widget" style="margin-bottom: 25px;">
+                    <div
+                        style="display: flex; gap: 15px; flex-wrap: wrap; align-items: center; justify-content: space-between;">
+                        <!-- Category Filters -->
+                        <div style="display: flex; gap: 8px; flex-wrap: wrap;" id="guideFilters">
+                            <button class="btn btn-gold" onclick="filterGuide('all')" id="filter-all">All Items</button>
+                            <button class="btn"
+                                style="background:rgba(255,255,255,0.05); color:var(--text-muted); border:1px solid var(--border-color);"
+                                onclick="filterGuide('plastic')" id="filter-plastic">Plastics</button>
+                            <button class="btn"
+                                style="background:rgba(255,255,255,0.05); color:var(--text-muted); border:1px solid var(--border-color);"
+                                onclick="filterGuide('paper')" id="filter-paper">Paper / Cardboard</button>
+                            <button class="btn"
+                                style="background:rgba(255,255,255,0.05); color:var(--text-muted); border:1px solid var(--border-color);"
+                                onclick="filterGuide('organic')" id="filter-organic">Organic</button>
+                            <button class="btn"
+                                style="background:rgba(255,255,255,0.05); color:var(--text-muted); border:1px solid var(--border-color);"
+                                onclick="filterGuide('metal')" id="filter-metal">Metal</button>
+                            <button class="btn"
+                                style="background:rgba(255,255,255,0.05); color:var(--text-muted); border:1px solid var(--border-color);"
+                                onclick="filterGuide('ewaste')" id="filter-ewaste">E-Waste</button>
+                        </div>
+                        <!-- Search Bar -->
+                        <input type="text" id="guideSearchInput" class="search-bar" placeholder="Search guide items..."
+                            oninput="searchGuide()" style="max-width: 250px;">
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px;"
+                    id="guideGrid">
+                    <!-- Dynamic guide items cards -->
+                </div>
+            </div>
+
+            <!-- TAB: LEADERBOARD -->
+            <div class="tab-panel" id="leaderboardTab">
+                <div class="header-summary">
+                    <div class="header-title">
+                        <h1>BHC Eco Leaderboard</h1>
+                        <p>Inter-department branch shield and individual rankings</p>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1.1fr 1fr; gap: 30px; margin-top: 20px;">
+                    <div class="widget">
+                        <div class="widget-title"><i class="fa-solid fa-trophy" style="color: var(--accent);"></i> Top
+                            Students</div>
+                        <div class="leaderboard-list" id="leaderboardList" style="margin-top: 20px;">
+                            <!-- Dynamic leaders list -->
+                        </div>
+                    </div>
+
+                    <div class="widget">
+                        <div class="widget-title"><i class="fa-solid fa-shield-halved"
+                                style="color: var(--secondary);"></i> Department Shield Rankings</div>
+                        <div class="leaderboard-list" id="deptLeaderboardList" style="margin-top: 20px;">
+                            <!-- Dynamic department ranking lists -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: PROFILE -->
+            <div class="tab-panel" id="profileTab">
+                <div class="header-summary">
+                    <div class="header-title">
+                        <h1>My Profile & Settings</h1>
+                        <p>Manage your account details, department, hostel, and profile photo</p>
+                    </div>
+                </div>
+
+                <div class="profile-layout" style="display: grid; grid-template-columns: 1fr 2fr; gap: 30px;">
+                    <!-- LEFT COLUMN: Profile Stats Card & Photo Upload -->
+                    <div style="display: flex; flex-direction: column; gap: 20px;">
+                        <div class="widget"
+                            style="text-align: center; display: flex; flex-direction: column; align-items: center; padding: 30px 20px;">
+                            <!-- Profile Picture Container -->
+                            <div class="profile-avatar-container"
+                                style="position: relative; width: 130px; height: 130px; border-radius: 50%; margin-bottom: 20px; box-shadow: 0 8px 24px rgba(229,193,88,0.25); border: 2px solid var(--border-color); overflow: hidden;">
+                                <img id="profileTabAvatarImage" src=""
+                                    style="width: 100%; height: 100%; object-fit: cover; display: none;">
+                                <div id="profileTabAvatarLetter"
+                                    style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 3rem; font-weight: 700; color: white; background: linear-gradient(135deg, var(--primary), var(--secondary));">
+                                    U</div>
+                                <div class="avatar-upload-overlay" onclick="triggerAvatarSelect()"
+                                    style="position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0, 0, 0, 0.6); padding: 6px 0; font-size: 0.75rem; color: #fff; cursor: pointer; opacity: 0; transition: opacity 0.3s; display: flex; align-items: center; justify-content: center; gap: 5px;">
+                                    <i class="fa-solid fa-camera"></i> Change
+                                </div>
+                            </div>
+                            <input type="file" id="avatarFileInput" accept="image/*" style="display: none;"
+                                onchange="handleAvatarChange(event)">
+
+                            <h2 id="profileNameDisplay"
+                                style="font-size: 1.4rem; font-weight: 700; margin-bottom: 4px; color: #fff;">Username
+                            </h2>
+                            <p id="profileRoleDisplay"
+                                style="font-size: 0.85rem; color: var(--primary); font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 25px;">
+                                Verified Student</p>
+
+                            <!-- Badges / Stats inside Profile Tab -->
+                            <div
+                                style="width: 100%; display: flex; flex-direction: column; gap: 12px; text-align: left; border-top: 1px solid var(--border-color); padding-top: 20px;">
+                                <div
+                                    style="display: flex; justify-content: space-between; align-items: center; font-size: 0.9rem;">
+                                    <span style="color: var(--text-muted);"><i class="fa-solid fa-coins"
+                                            style="color: var(--primary); margin-right: 8px;"></i> Eco Points</span>
+                                    <span id="profilePointsVal" style="font-weight: 700; color: #fff;">0</span>
+                                </div>
+                                <div
+                                    style="display: flex; justify-content: space-between; align-items: center; font-size: 0.9rem;">
+                                    <span style="color: var(--text-muted);"><i class="fa-solid fa-leaf"
+                                            style="color: #10b981; margin-right: 8px;"></i> Carbon Offset</span>
+                                    <span id="profileCO2Val" style="font-weight: 700; color: #fff;">0.0 kg</span>
+                                </div>
+                                <div
+                                    style="display: flex; justify-content: space-between; align-items: center; font-size: 0.9rem;">
+                                    <span style="color: var(--text-muted);"><i class="fa-solid fa-medal"
+                                            style="color: var(--accent); margin-right: 8px;"></i> Leaderboard
+                                        Rank</span>
+                                    <span id="profileRankVal" style="font-weight: 700; color: #fff;">#--</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- RIGHT COLUMN: Edit Settings Form -->
+                    <div class="widget" style="padding: 30px;">
+                        <div
+                            style="font-weight: 700; font-size: 1.3rem; margin-bottom: 20px; color: #fff; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">
+                            Account Details</div>
+
+                        <div class="form-group" style="margin-bottom: 20px;">
+                            <label><i class="fa-solid fa-user" style="margin-right: 8px;"></i> Username</label>
+                            <input type="text" id="profileUsernameInput" placeholder="Enter Username">
+                        </div>
+
+                        <div class="form-group" style="margin-bottom: 20px;">
+                            <label><i class="fa-solid fa-graduation-cap" style="margin-right: 8px;"></i> Department /
+                                Branch</label>
+                            <select id="profileDepartmentInput">
+                                <optgroup label="Arts & Humanities">
+                                    <option value="Commerce">Commerce</option>
+                                    <option value="Economics">Economics</option>
+                                    <option value="English">English</option>
+                                    <option value="History">History</option>
+                                    <option value="Management Studies">Management Studies</option>
+                                    <option value="Social Work">Social Work</option>
+                                    <option value="Tamil">Tamil</option>
+                                </optgroup>
+                                <optgroup label="Science">
+                                    <option value="Actuarial Science">Actuarial Science</option>
+                                    <option value="Aviation">Aviation</option>
+                                    <option value="Bioinformatics">Bioinformatics</option>
+                                    <option value="Biotechnology">Biotechnology</option>
+                                    <option value="Botany">Botany</option>
+                                    <option value="Chemistry">Chemistry</option>
+                                    <option value="Computer Application">Computer Application</option>
+                                    <option value="Computer Science">Computer Science</option>
+                                    <option value="Data Science">Data Science</option>
+                                    <option value="Environmental Sciences">Environmental Sciences</option>
+                                    <option value="Information Technology">Information Technology</option>
+                                    <option value="Library & Inf. Science">Library & Inf. Science</option>
+                                    <option value="Mathematics">Mathematics</option>
+                                    <option value="Nutrition & Dietetics">Nutrition & Dietetics</option>
+                                    <option value="Physics">Physics</option>
+                                    <option value="Visual Communication">Visual Communication</option>
+                                    <option value="Zoology">Zoology</option>
+                                </optgroup>
+                            </select>
+                        </div>
+
+                        <div class="form-group" style="margin-bottom: 20px;">
+                            <label><i class="fa-solid fa-hotel" style="margin-right: 8px;"></i> Hostel Residence</label>
+                            <select id="profileHostelInput">
+                                <option value="Schwartz Hostel">Schwartz Hostel (Boys)</option>
+                                <option value="Gardiner Hostel">Gardiner Hostel (Boys)</option>
+                                <option value="Dodson Hostel">Dodson Hostel (Boys)</option>
+                                <option value="Launder Hostel">Launder Hostel (Boys)</option>
+                                <option value="Vestry Hostel">Vestry Hostel (Boys)</option>
+                                <option value="All Saints Hostel">All Saints Hostel (Girls)</option>
+                                <option value="Bishop Solomon Doraiswamy Hostel">Doraiswamy Hostel (Girls)</option>
+                                <option value="Bishop Thorp Hostel">Thorp Hostel (Girls)</option>
+                                <option value="Margaret Addicott Hostel">Addicott Hostel (Girls)</option>
+                                <option value="Day Scholar">Day Scholar (Non-Hosteler)</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group" style="margin-bottom: 20px;">
+                            <label><i class="fa-solid fa-id-card" style="margin-right: 8px;"></i> Registration
+                                Number</label>
+                            <input type="text" id="profileRegNoInput" placeholder="Enter Registration Number">
+                        </div>
+
+                        <div class="form-group" style="margin-bottom: 20px;">
+                            <label><i class="fa-solid fa-phone" style="margin-right: 8px;"></i> Phone Number</label>
+                            <input type="text" id="profilePhoneInput" placeholder="Enter Phone Number">
+                        </div>
+
+                        <div class="form-group" style="margin-bottom: 20px;">
+                            <label><i class="fa-solid fa-envelope" style="margin-right: 8px;"></i> Email Address</label>
+                            <input type="email" id="profileEmailInput" placeholder="Enter Email Address">
+                        </div>
+
+                        <div class="form-group" style="margin-bottom: 20px;">
+                            <label><i class="fa-solid fa-chalkboard-user" style="margin-right: 8px;"></i> Class /
+                                Course</label>
+                            <input type="text" id="profileClassInput" placeholder="Enter Class (e.g. B.Sc. CS)">
+                        </div>
+
+                        <div style="display: flex; gap: 20px; margin-bottom: 20px;">
+                            <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                                <label><i class="fa-solid fa-users-rectangle" style="margin-right: 8px;"></i>
+                                    Section</label>
+                                <input type="text" id="profileSectionInput" placeholder="Section">
+                            </div>
+                            <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                                <label><i class="fa-solid fa-clock" style="margin-right: 8px;"></i> Shift</label>
+                                <select id="profileShiftInput"
+                                    style="width:100%; background: rgba(30, 41, 59, 0.5); border: 1px solid var(--border-color); border-radius: 12px; padding: 12px 16px; color:#fff; outline:none; font-family:'Outfit'; font-size:0.9rem;">
+                                    <option value="Shift I">Shift I (Aided)</option>
+                                    <option value="Shift II">Shift II (Self-Financed)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div
+                            style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); padding: 20px; border-radius: 12px; margin-bottom: 25px; text-align: left;">
+                            <div style="font-weight: 600; font-size: 0.95rem; margin-bottom: 15px; color: #fff;"><i
+                                    class="fa-solid fa-shield-halved"></i> Change Account Password</div>
+
+                            <div class="form-group" style="margin-bottom: 15px;">
+                                <label style="font-size: 0.8rem; color: var(--text-muted);"><i class="fa-solid fa-key"
+                                        style="margin-right: 8px;"></i> Current Password</label>
+                                <input type="password" id="profileCurrentPasswordInput"
+                                    placeholder="Required to verify password changes">
+                            </div>
+
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label style="font-size: 0.8rem; color: var(--text-muted);"><i class="fa-solid fa-key"
+                                        style="margin-right: 8px;"></i> New Password</label>
+                                <input type="password" id="profilePasswordInput" placeholder="Enter new password">
+                            </div>
+                        </div>
+
+                        <button class="scheduler-btn" onclick="saveProfileChanges()"
+                            style="background: linear-gradient(135deg, var(--primary), #b5952c); color: white; font-weight: 600; border: none; padding: 14px 28px; border-radius: 12px; cursor: pointer; box-shadow: 0 4px 12px rgba(229,193,88,0.25); display: flex; align-items: center; gap: 10px; font-size: 1rem; width: fit-content;">
+                            <i class="fa-solid fa-floppy-disk"></i> Save Profile Changes
+                        </button>
+                    </div>
+                </div>
+            </div>
+    </div>
+
+    </main>
+    </div>
+
+    <!-- FORGOT PASSWORD MODAL -->
+    <div id="forgotPasswordModal" class="modal-overlay" style="display: none; z-index: 1100;">
+        <div class="auth-card"
+            style="width: 100%; max-width: 450px; padding: 35px; border: 1px solid var(--border-color); background: rgba(15, 23, 42, 0.95); position: relative; margin: auto;">
+            <span onclick="closeForgotPasswordModal()"
+                style="position: absolute; top: 15px; right: 20px; font-size: 1.5rem; color: var(--text-muted); cursor: pointer; transition: color 0.2s;"
+                onmouseover="this.style.color='#fff'" onmouseout="this.style.color='var(--text-muted)'">&times;</span>
+
+            <h2 style="font-size: 1.6rem; font-weight: 700; margin-bottom: 5px; color: #fff; text-align: center;"><i
+                    class="fa-solid fa-unlock-keyhole" style="color: var(--primary); margin-right: 10px;"></i> Reset
+                Password</h2>
+            <p style="font-size: 0.85rem; color: var(--text-muted); text-align: center; margin-bottom: 25px;">Recover
+                your BHC EcoSort account using your credentials</p>
+
+            <!-- Step 1: Request OTP -->
+            <div id="forgotStep1" style="display: block;">
+                <div class="input-group" style="margin-bottom: 20px;">
+                    <i class="fa-solid fa-user-tag"></i>
+                    <input type="text" id="forgotIdent" placeholder="Username or Registration Number">
+                </div>
+                <button class="auth-btn" onclick="requestResetOTP()">Request OTP</button>
+            </div>
+
+            <!-- Step 2: Verification and Reset -->
+            <div id="forgotStep2" style="display: none;">
+                <div style="font-size: 0.85rem; color: var(--primary); background: rgba(229, 193, 88, 0.08); padding: 12px 16px; border-radius: 8px; border: 1px dashed var(--primary); margin-bottom: 20px;"
+                    id="otpDestInfo">
+                    OTP sent to registered phone and email.
+                </div>
+
+                <div class="input-group" style="margin-bottom: 15px;">
+                    <i class="fa-solid fa-lock-open"></i>
+                    <input type="text" id="forgotOTP" placeholder="Enter 6-Digit OTP">
+                </div>
+                <div class="input-group" style="margin-bottom: 20px;">
+                    <i class="fa-solid fa-key"></i>
+                    <input type="password" id="forgotNewPassword" placeholder="Enter New Password">
+                </div>
+                <button class="auth-btn" onclick="verifyAndResetPassword()">Reset Password</button>
+                <div style="text-align: center; margin-top: 15px;">
+                    <span onclick="backToRequestOTP()"
+                        style="color: var(--text-muted); font-size: 0.8rem; cursor: pointer; text-decoration: underline;">Back
+                        / Resend OTP</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MOCK COMMUNICATIONS POPUP (SMS/EMAIL SIMULATION) -->
+    <div id="communicationSimulation"
+        style="display: none; position: fixed; bottom: 20px; right: 20px; width: 350px; background: rgba(17, 24, 39, 0.95); border: 2px solid var(--primary); border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); z-index: 10000; padding: 20px; overflow: hidden; animation: slideIn 0.3s ease-out;">
+        <div
+            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">
+            <div
+                style="color: var(--primary); font-weight: 700; font-size: 0.9rem; display: flex; align-items: center; gap: 8px;">
+                <i class="fa-solid fa-tower-cell" style="animation: pulse 1s infinite alternate;"></i> BHC Telecom
+                Center
+            </div>
+            <span onclick="closeCommunicationPopup()"
+                style="cursor: pointer; font-size: 1.1rem; color: var(--text-muted);">&times;</span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+            <div style="background: rgba(30, 41, 59, 0.6); padding: 10px; border-radius: 8px;">
+                <div style="font-size: 0.75rem; color: var(--primary); font-weight: 600; margin-bottom: 4px;"><i
+                        class="fa-solid fa-comment-sms"></i> Simulated SMS to <span id="smsSimPhone"></span></div>
+                <div style="font-size: 0.8rem; color: #fff; font-family: monospace;" id="smsSimText"></div>
+            </div>
+            <div style="background: rgba(30, 41, 59, 0.6); padding: 10px; border-radius: 8px;">
+                <div style="font-size: 0.75rem; color: var(--primary); font-weight: 600; margin-bottom: 4px;"><i
+                        class="fa-solid fa-envelope"></i> Simulated Email to <span id="emailSimEmail"></span></div>
+                <div style="font-size: 0.8rem; color: #fff; font-family: monospace;" id="emailSimText"></div>
+            </div>
+        </div>
+        <div
+            style="margin-top: 12px; font-size: 0.75rem; color: var(--text-muted); text-align: center; font-style: italic;">
+            (Copy-paste the OTP from above to verify)
+        </div>
+    </div>
+
+    <!-- Script Logic -->
+    <script>
+        const API_URL = (window.location.protocol === 'file:' || !window.location.hostname) 
+            ? "http://127.0.0.1:5000" 
+            : window.location.origin;
+
+        // BHC Academic Departments Campus Location Mapping
+        const DEPT_LOCATIONS = {
+            "Commerce": "Main Building, Ground Floor",
+            "Economics": "Main Building, First Floor",
+            "English": "Main Building, Second Floor",
+            "History": "Main Building, First Floor",
+            "Management Studies": "Management Block (BBA), First Floor",
+            "Social Work": "Social Work Block, Ground Floor",
+            "Tamil": "Main Building, Ground Floor",
+            "Actuarial Science": "Golden Jubilee Block, Third Floor",
+            "Aviation": "Aviation Centre, Ground Floor",
+            "Bioinformatics": "Golden Jubilee Block, Second Floor",
+            "Biotechnology": "Golden Jubilee Block, First Floor",
+            "Botany": "GJ Block / Science Block, Ground Floor",
+            "Chemistry": "Science Block, First Floor",
+            "Computer Application": "Computer Science Block, Second Floor",
+            "Computer Science": "Computer Science Block, First Floor",
+            "Data Science": "Computer Science Block, Third Floor",
+            "Environmental Sciences": "Golden Jubilee Block, Second Floor",
+            "Information Technology": "Computer Science Block, First Floor",
+            "Library & Inf. Science": "Library Block, Ground Floor",
+            "Mathematics": "Main Building, Second Floor",
+            "Nutrition & Dietetics": "GJ Block / Science Block, First Floor",
+            "Physics": "Science Block, Ground Floor",
+            "Visual Communication": "Science Block, Second Floor",
+            "Zoology": "Science Block, First Floor"
+        };
+
+        let currentUser = null;
+        let chartInstance = null;
+        let pickupMapObj = null;
+        let hubsMapObj = null;
+        let pickupMarkers = [];
+        let hubMarkers = [];
+
+        // Check if user is already logged in
+        window.addEventListener('load', () => {
+            const cachedUser = localStorage.getItem('eco_user');
+            if (cachedUser) {
+                currentUser = JSON.parse(cachedUser);
+                enterApp();
+            }
+        });
+
+        // Auth management
+        let isLoginMode = false;
+
+        // Default starts in Register mode, let's toggle auth mode
+        window.addEventListener('DOMContentLoaded', () => {
+            // Setup registration fields visibility
+            document.getElementById('regDeptGroup').style.display = 'block';
+            document.getElementById('regHostelGroup').style.display = 'block';
+            document.getElementById('regExtraFieldsGroup').style.display = 'block';
+            document.getElementById('forgotPasswordLinkContainer').style.display = 'none';
+        });
+
+        function toggleAuthMode() {
+            isLoginMode = !isLoginMode;
+            document.getElementById('authTitle').innerText = isLoginMode ? "Sign In" : "Create Account";
+            document.getElementById('authSubtitle').innerText = isLoginMode ? "Access your BHC green dashboard" : "Join the BHC green community and earn points";
+            document.getElementById('authSubmitBtn').innerText = isLoginMode ? "Login" : "Register";
+            document.getElementById('regDeptGroup').style.display = isLoginMode ? "none" : "block";
+            document.getElementById('regHostelGroup').style.display = isLoginMode ? "none" : "block";
+            document.getElementById('regExtraFieldsGroup').style.display = isLoginMode ? "none" : "block";
+            document.getElementById('forgotPasswordLinkContainer').style.display = isLoginMode ? "block" : "none";
+            document.getElementById('authToggleText').innerHTML = isLoginMode ?
+                `Don't have an account? <span onclick="toggleAuthMode()">Sign Up</span>` :
+                `Already have an account? <span onclick="toggleAuthMode()">Sign In</span>`;
+        }
+
+        function submitAuth() {
+            const username = document.getElementById('authUsername').value.trim();
+            const password = document.getElementById('authPassword').value;
+
+            if (!username || !password) {
+                alert("Please fill in both fields.");
+                return;
+            }
+
+            const bodyObj = { username, password };
+
+            if (!isLoginMode) {
+                bodyObj.department = document.getElementById('authDepartment').value;
+                bodyObj.hostel = document.getElementById('authHostel').value;
+                bodyObj.reg_no = document.getElementById('authRegNo').value.trim();
+                bodyObj.phone = document.getElementById('authPhone').value.trim();
+                bodyObj.email = document.getElementById('authEmail').value.trim();
+                bodyObj.class_name = document.getElementById('authClass').value.trim();
+                bodyObj.section = document.getElementById('authSection').value.trim();
+                bodyObj.shift = document.getElementById('authShift').value;
+            }
+
+            const endpoint = isLoginMode ? "/api/login" : "/api/register";
+
+            fetch(API_URL + endpoint, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(bodyObj)
+            })
+                .then(res => {
+                    if (!res.ok) {
+                        return res.json().then(err => { throw new Error(err.error || "Authentication failed") });
+                    }
+                    return res.json();
+                })
+                .then(data => {
+                    currentUser = data.user;
+                    localStorage.setItem('eco_user', JSON.stringify(currentUser));
+                    enterApp();
+                })
+                .catch(err => {
+                    alert(err.message);
+                });
+        }
+
+        function logout() {
+            localStorage.removeItem('eco_user');
+            currentUser = null;
+            document.getElementById('appView').style.display = 'none';
+            document.getElementById('authView').style.display = 'flex';
+        }
+
+        function enterApp() {
+            document.getElementById('authView').style.display = 'none';
+            document.getElementById('appView').style.display = 'flex';
+
+            // Set user detail elements
+            document.getElementById('profileUsername').innerText = currentUser.username;
+            document.getElementById('dashWelcomeName').innerText = currentUser.username;
+
+            document.getElementById('userDisplayDept').innerText = currentUser.department || "General";
+            document.getElementById('userDisplayHostel').innerText = currentUser.hostel || "Day Scholar";
+
+            // Set dynamic department location
+            const loc = DEPT_LOCATIONS[currentUser.department] || "Main Campus Block";
+            const locEl = document.getElementById('userDisplayDeptLoc');
+            if (locEl) locEl.innerText = loc;
+
+            // Show role dashboard switcher links
+            if (currentUser.role === 'Admin' || currentUser.role === 'SuperAdmin') {
+                document.getElementById('navAdminLink').style.display = 'flex';
+                document.getElementById('navCollectorLink').style.display = 'none';
+            } else if (currentUser.role === 'Collector') {
+                document.getElementById('navAdminLink').style.display = 'none';
+                document.getElementById('navCollectorLink').style.display = 'flex';
+            } else {
+                document.getElementById('navAdminLink').style.display = 'none';
+                document.getElementById('navCollectorLink').style.display = 'none';
+            }
+
+            updateAvatarUI();
+            updateProfileTabDetails();
+            updateDashboardMetrics();
+            loadRecentLogs();
+            loadLeaderboard();
+            renderGuide(GUIDE_ITEMS);
+        }
+
+        // Tab Switching
+        function switchTab(tabId, el) {
+            document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+            document.querySelectorAll('.tab-panel').forEach(panel => panel.classList.remove('active'));
+
+            el.classList.add('active');
+            document.getElementById(tabId + 'Tab').classList.add('active');
+
+            // Turn off camera stream if switching away from scanner
+            if (tabId !== 'scanner' && cameraStreamObj) {
+                const tracks = cameraStreamObj.getTracks();
+                tracks.forEach(track => track.stop());
+                cameraStreamObj = null;
+                document.getElementById('cameraStream').style.display = 'none';
+                document.getElementById('btnCapture').style.display = 'none';
+                document.getElementById('uploadPreview').style.display = 'none';
+                document.getElementById('dropzonePrompt').style.display = 'block';
+                const dropzone = document.getElementById('dropzone');
+                dropzone.style.cursor = 'pointer';
+                dropzone.setAttribute('onclick', 'triggerFileSelect()');
+
+                const btnUpload = document.getElementById('btnUploadMode');
+                const btnCamera = document.getElementById('btnCameraMode');
+                btnUpload.style.background = 'var(--secondary)';
+                btnUpload.style.color = '#fff';
+                btnUpload.style.border = 'none';
+                btnCamera.style.background = 'rgba(255,255,255,0.05)';
+                btnCamera.style.color = 'var(--text-muted)';
+                btnCamera.style.border = '1px solid var(--border-color)';
+                scanMode = 'upload';
+            }
+
+            if (tabId === 'dashboard') {
+                updateDashboardMetrics();
+                loadRecentLogs();
+            } else if (tabId === 'leaderboard') {
+                loadLeaderboard();
+            } else if (tabId === 'profile') {
+                updateProfileTabDetails();
+            }
+        }
+
+        // Update Dashboard statistics
+        function updateDashboardMetrics() {
+            document.getElementById('statPoints').innerText = currentUser.points;
+            document.getElementById('statCO2').innerText = parseFloat(currentUser.co2_saved).toFixed(1);
+
+            // Set user rank and tiers dynamically
+            let tier = "Eco Rookie";
+            if (currentUser.points > 500) tier = "Campus Champion";
+            else if (currentUser.points > 200) tier = "Green Ranger";
+            document.getElementById('profileTier').innerText = `${tier} (${currentUser.role || 'Student'})`;
+
+            // Fetch total count and leaderboard rank
+            fetch(API_URL + "/api/leaderboard")
+                .then(res => res.json())
+                .then(leaders => {
+                    const rank = leaders.findIndex(l => l.username === currentUser.username) + 1;
+                    document.getElementById('statRank').innerText = rank > 0 ? "#" + rank : "#--";
+                });
+
+            // Get user specific logs to compute total scanned items
+            fetch(`${API_URL}/api/logs?user_id=${currentUser.id}`)
+                .then(res => res.json())
+                .then(logs => {
+                    document.getElementById('statSorted').innerText = logs.length;
+
+                    // Render/Update Chart
+                    renderChart(logs);
+                });
+        }
+
+        // Render activity charts
+        function renderChart(logs) {
+            const categories = {};
+            logs.forEach(log => {
+                categories[log.category] = (categories[log.category] || 0) + 1;
+            });
+
+            const labels = Object.keys(categories);
+            const data = Object.values(categories);
+
+            // Clean previous charts if any
+            if (chartInstance) {
+                chartInstance.destroy();
+            }
+
+            const ctx = document.getElementById('recyclingChart').getContext('2d');
+            chartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels.length ? labels : ['Plastic', 'Paper', 'Organic', 'Metal', 'General'],
+                    datasets: [{
+                        data: data.length ? data : [0, 0, 0, 0, 0],
+                        backgroundColor: [
+                            'rgba(59, 130, 246, 0.7)',  // Plastic
+                            'rgba(96, 165, 250, 0.7)',  // Paper
+                            'rgba(16, 185, 129, 0.7)',  // Organic
+                            'rgba(239, 68, 68, 0.7)',   // Metal
+                            'rgba(107, 114, 128, 0.7)'  // General
+                        ],
+                        borderColor: 'rgba(255, 255, 255, 0.15)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { color: '#94a3b8' }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Fetch logs feed
+        function loadRecentLogs() {
+            fetch(API_URL + "/api/logs")
+                .then(res => res.json())
+                .then(logs => {
+                    const tbody = document.getElementById('recentActivityRows');
+                    tbody.innerHTML = '';
+
+                    if (!logs.length) {
+                        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--text-muted);">No activity recorded yet</td></tr>`;
+                        return;
+                    }
+
+                    logs.forEach(log => {
+                        let catClass = 'general';
+                        if (log.category.includes('Plastic')) catClass = 'plastic';
+                        else if (log.category.includes('Organic')) catClass = 'organic';
+                        else if (log.category.includes('Metal')) catClass = 'metal';
+                        else if (log.category.includes('Paper')) catClass = 'paper';
+                        else if (log.category.includes('E-Waste')) catClass = 'ewaste';
+
+                        const formattedDate = new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+                        let avatarHtml = `<div class="avatar" style="width:24px;height:24px;font-size:0.65rem;">${log.username.charAt(0).toUpperCase()}</div>`;
+                        if (log.avatar_url) {
+                            avatarHtml = `
+                                <div style="width:24px;height:24px;border-radius:50%;overflow:hidden;flex-shrink:0;box-shadow:0 1px 4px rgba(229,193,88,0.15);display:flex;align-items:center;justify-content:center;background:var(--card-bg);">
+                                    <img src="${API_URL}/${log.avatar_url}" style="width:100%;height:100%;object-fit:cover;">
+                                </div>
+                            `;
+                        }
+
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td><div style="display:flex;align-items:center;gap:8px;">
+                                ${avatarHtml}
+                                <span>${log.username}</span>
+                            </div></td>
+                            <td><strong>${log.item_name}</strong></td>
+                            <td><span class="log-category-pill ${catClass}">${log.category}</span></td>
+                            <td style="color:var(--primary); font-weight:700;">+${log.points}</td>
+                            <td>${parseFloat(log.co2_offset || 0).toFixed(1)} kg</td>
+                            <td>${formattedDate}</td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                });
+        }
+
+        // Fetch leaders list and branch shield stats
+        function loadLeaderboard() {
+            // Load student leaderboard
+            fetch(API_URL + "/api/leaderboard")
+                .then(res => res.json())
+                .then(leaders => {
+                    const list = document.getElementById('leaderboardList');
+                    list.innerHTML = '';
+
+                    leaders.forEach((l, idx) => {
+                        const div = document.createElement('div');
+                        div.className = `leaderboard-item ${idx < 3 ? 'top-three' : ''}`;
+
+                        let badgeIcon = '';
+                        if (idx === 0) badgeIcon = '🥇 ';
+                        else if (idx === 1) badgeIcon = '🥈 ';
+                        else if (idx === 2) badgeIcon = '🥉 ';
+
+                        let avatarHtml = `<div class="avatar" style="width:34px;height:34px;font-size:0.85rem;">${l.username.charAt(0).toUpperCase()}</div>`;
+                        if (l.avatar_url) {
+                            avatarHtml = `
+                                <div style="width:34px;height:34px;border-radius:50%;overflow:hidden;flex-shrink:0;box-shadow:0 2px 6px rgba(229,193,88,0.15);display:flex;align-items:center;justify-content:center;background:var(--card-bg);">
+                                    <img src="${API_URL}/${l.avatar_url}" style="width:100%;height:100%;object-fit:cover;">
+                                </div>
+                            `;
+                        }
+
+                        div.innerHTML = `
+                            <div class="rank-number">${badgeIcon || '#' + (idx + 1)}</div>
+                            ${avatarHtml}
+                            <div>
+                                <div class="leaderboard-user">${l.username}</div>
+                                <span style="font-size:0.7rem; color:var(--text-muted);">${l.department} · ${l.hostel}</span>
+                            </div>
+                            <div class="leaderboard-score">
+                                <p>${l.points} pts</p>
+                                <span>${parseFloat(l.co2_saved).toFixed(1)} kg CO2</span>
+                            </div>
+                        `;
+                        list.appendChild(div);
+                    });
+                });
+
+            // Load department leaderboard
+            fetch(API_URL + "/api/stats/departments")
+                .then(res => res.json())
+                .then(depts => {
+                    const list = document.getElementById('deptLeaderboardList');
+                    list.innerHTML = '';
+
+                    if (!depts.length) {
+                        list.innerHTML = `<div style="text-align:center;color:var(--text-muted);font-size:0.85rem;padding:20px;">No department scores recorded yet</div>`;
+                        return;
+                    }
+
+                    depts.forEach((d, idx) => {
+                        const div = document.createElement('div');
+                        div.className = `leaderboard-item ${idx < 3 ? 'top-three' : ''}`;
+
+                        let shieldIcon = '🛡️ ';
+                        if (idx === 0) shieldIcon = '🏆 ';
+
+                        div.innerHTML = `
+                            <div class="rank-number">${idx + 1}</div>
+                            <div style="font-size:1.5rem;width:35px;text-align:center;">${shieldIcon}</div>
+                            <div>
+                                <div class="leaderboard-user">${d.department}</div>
+                                <span style="font-size:0.7rem; color:var(--text-muted);">${d.student_count} Students Active</span>
+                            </div>
+                            <div class="leaderboard-score">
+                                <p style="color: var(--secondary);">${d.total_points} pts</p>
+                                <span>${parseFloat(d.total_co2).toFixed(1)} kg CO2</span>
+                            </div>
+                        `;
+                        list.appendChild(div);
+                    });
+                });
+        }
+
+        // --- SCANNER FUNCTIONS ---
+        let scanMode = 'upload';
+        let cameraStreamObj = null;
+
+        function setScanMode(mode) {
+            scanMode = mode;
+            const btnUpload = document.getElementById('btnUploadMode');
+            const btnCamera = document.getElementById('btnCameraMode');
+            const dropzone = document.getElementById('dropzone');
+            const cameraVideo = document.getElementById('cameraStream');
+            const previewImg = document.getElementById('uploadPreview');
+            const prompt = document.getElementById('dropzonePrompt');
+            const captureBtn = document.getElementById('btnCapture');
+
+            // Reset video stream if switching away from camera
+            if (mode !== 'camera' && cameraStreamObj) {
+                const tracks = cameraStreamObj.getTracks();
+                tracks.forEach(track => track.stop());
+                cameraStreamObj = null;
+            }
+
+            if (mode === 'upload') {
+                btnUpload.style.background = 'var(--secondary)';
+                btnUpload.style.color = '#fff';
+                btnUpload.style.border = 'none';
+
+                btnCamera.style.background = 'rgba(255,255,255,0.05)';
+                btnCamera.style.color = 'var(--text-muted)';
+                btnCamera.style.border = '1px solid var(--border-color)';
+
+                cameraVideo.style.display = 'none';
+                captureBtn.style.display = 'none';
+                previewImg.style.display = 'none';
+                prompt.style.display = 'block';
+                dropzone.style.cursor = 'pointer';
+                dropzone.setAttribute('onclick', 'triggerFileSelect()');
+            } else {
+                btnCamera.style.background = 'var(--secondary)';
+                btnCamera.style.color = '#fff';
+                btnCamera.style.border = 'none';
+
+                btnUpload.style.background = 'rgba(255,255,255,0.05)';
+                btnUpload.style.color = 'var(--text-muted)';
+                btnUpload.style.border = '1px solid var(--border-color)';
+
+                prompt.style.display = 'none';
+                previewImg.style.display = 'none';
+                cameraVideo.style.display = 'block';
+                captureBtn.style.display = 'block';
+                dropzone.style.cursor = 'default';
+                dropzone.removeAttribute('onclick');
+
+                // Initialize Camera Stream
+                navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+                    .then(stream => {
+                        cameraStreamObj = stream;
+                        cameraVideo.srcObject = stream;
+                    })
+                    .catch(err => {
+                        alert("Camera access denied or unavailable: " + err.message);
+                        setScanMode('upload');
+                    });
+            }
+        }
+
+        function triggerFileSelect() {
+            document.getElementById('fileInput').click();
+        }
+
+        function handleFileChange(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            // Preview image
+            const preview = document.getElementById('uploadPreview');
+            preview.src = URL.createObjectURL(file);
+            preview.style.display = 'block';
+            document.getElementById('dropzonePrompt').style.display = 'none';
+
+            // Show scan laser line
+            const laser = document.getElementById('laserLine');
+            laser.style.display = 'block';
+
+            // Prepare Form Data upload
+            const data = new FormData();
+            data.append("image", file);
+            data.append("user_id", currentUser.id);
+
+            // Fetch ML classification
+            fetch(API_URL + "/predict", {
+                method: "POST",
+                body: data
+            })
+                .then(res => res.json())
+                .then(result => {
+                    // Remove laser line
+                    laser.style.display = 'none';
+
+                    // Display Results Details
+                    document.getElementById('resPlaceholder').style.display = 'none';
+                    document.getElementById('resDetails').style.display = 'block';
+
+                    document.getElementById('resItemName').innerText = result.detected_item;
+                    document.getElementById('resConfidence').innerText = `Confidence: ${result.confidence}%`;
+
+                    const binBox = document.getElementById('resBinBox');
+                    binBox.className = `bin-alert-box ${result.bin_color}`;
+                    document.getElementById('resBinText').innerText = result.bin;
+
+                    // Set custom advisory tips based on category
+                    let advisory = "Dispose responsibly.";
+                    if (result.bin_color === 'blue') advisory = "Rinse containers to remove food residues. Empty plastic caps can remain attached. Flatten boxes to save space.";
+                    else if (result.bin_color === 'green') advisory = "Ideal for organic waste. Keep plastic packaging out. Can be composted directly to nourish soil.";
+                    else if (result.bin_color === 'red') advisory = "Wash tin and metal cans. Aluminum foils and beverage cans are fully recyclable.";
+                    else if (result.bin_color === 'orange') advisory = "Warning: Electronic components require professional disposal. Schedule a bulk pickup above to hand it to specialists.";
+
+                    document.getElementById('resAdvisory').innerText = advisory;
+                    document.getElementById('resPoints').innerText = `+${result.points}`;
+                    document.getElementById('resCO2').innerText = `${result.co2_offset} kg`;
+
+                    // Update current user cached metrics
+                    currentUser.points = result.user_points;
+                    currentUser.co2_saved = result.user_co2_saved;
+                    localStorage.setItem('eco_user', JSON.stringify(currentUser));
+                })
+                .catch(err => {
+                    laser.style.display = 'none';
+                    alert("Upload failed. Verify python Flask server is running on localhost:5000");
+                    console.error(err);
+                });
+        }
+
+        function captureAndScan() {
+            const video = document.getElementById('cameraStream');
+            const canvas = document.getElementById('captureCanvas');
+            const ctx = canvas.getContext('2d');
+
+            if (!cameraStreamObj) return;
+
+            // Set canvas size to video frame size
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+
+            // Draw current video frame to canvas
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            // Trigger scan animation
+            const laser = document.getElementById('laserLine');
+            laser.style.display = 'block';
+
+            // Convert canvas drawing to Blob
+            canvas.toBlob(blob => {
+                const file = new File([blob], "camera_capture.jpg", { type: "image/jpeg" });
+
+                // Show snapshot as preview
+                const preview = document.getElementById('uploadPreview');
+                preview.src = URL.createObjectURL(file);
+                preview.style.display = 'block';
+                video.style.display = 'none';
+                document.getElementById('btnCapture').style.display = 'none';
+
+                // Stop the camera tracks to free resources
+                const tracks = cameraStreamObj.getTracks();
+                tracks.forEach(track => track.stop());
+                cameraStreamObj = null;
+
+                const data = new FormData();
+                data.append("image", file);
+                data.append("user_id", currentUser.id);
+
+                // Fetch prediction from backend API
+                fetch(API_URL + "/predict", {
+                    method: "POST",
+                    body: data
+                })
+                    .then(res => res.json())
+                    .then(result => {
+                        laser.style.display = 'none';
+
+                        document.getElementById('resPlaceholder').style.display = 'none';
+                        document.getElementById('resDetails').style.display = 'block';
+
+                        document.getElementById('resItemName').innerText = result.detected_item;
+                        document.getElementById('resConfidence').innerText = `Confidence: ${result.confidence}%`;
+
+                        const binBox = document.getElementById('resBinBox');
+                        binBox.className = `bin-alert-box ${result.bin_color}`;
+                        document.getElementById('resBinText').innerText = result.bin;
+
+                        let advisory = "Dispose responsibly.";
+                        if (result.bin_color === 'blue') advisory = "Rinse containers to remove food residues. Empty plastic caps can remain attached. Flatten boxes to save space.";
+                        else if (result.bin_color === 'green') advisory = "Ideal for organic waste. Keep plastic packaging out. Can be composted directly to nourish soil.";
+                        else if (result.bin_color === 'red') advisory = "Wash tin and metal cans. Aluminum foils and beverage cans are fully recyclable.";
+                        else if (result.bin_color === 'orange') advisory = "Warning: Electronic components require professional disposal. Schedule a bulk pickup above to hand it to specialists.";
+
+                        document.getElementById('resAdvisory').innerText = advisory;
+                        document.getElementById('resPoints').innerText = `+${result.points}`;
+                        document.getElementById('resCO2').innerText = `${result.co2_offset} kg`;
+
+                        currentUser.points = result.user_points;
+                        currentUser.co2_saved = result.user_co2_saved;
+                        localStorage.setItem('eco_user', JSON.stringify(currentUser));
+                    })
+                    .catch(err => {
+                        laser.style.display = 'none';
+                        alert("Upload failed. Verify python Flask server is running on localhost:5000");
+                        console.error(err);
+                    });
+            }, 'image/jpeg');
+        }
+
+        // --- PICKUP & DRIVER SYSTEM ---
+        let isDriverMode = false;
+
+        function initPickupMap() {
+            if (pickupMapObj) return; // already initialized
+
+            // Center map around Bishop Heber College campus (10.8156, 78.67336)
+            const mapCenter = [10.8156, 78.67336];
+            pickupMapObj = L.map('pickupMap').setView(mapCenter, 17);
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(pickupMapObj);
+
+            // Wait a tick to trigger resize for Leaflet bounds
+            setTimeout(() => { pickupMapObj.invalidateSize() }, 100);
+
+            loadPickups();
+        }
+
+        function loadPickups() {
+            fetch(API_URL + "/api/pickups")
+                .then(res => res.json())
+                .then(pickups => {
+                    // Render personal pickups in form container list
+                    const myList = document.getElementById('myPickupsList');
+                    myList.innerHTML = '';
+
+                    const myItems = pickups.filter(p => p.user_id === currentUser.id);
+                    if (!myItems.length) {
+                        myList.innerHTML = `<div style="text-align:center;color:var(--text-muted);font-size:0.8rem;padding:10px;">No scheduled pickups yet</div>`;
+                    } else {
+                        myItems.forEach(p => {
+                            const div = document.createElement('div');
+                            div.className = 'pickup-item-mini';
+                            let dateStr = new Date(p.date_time).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit' });
+                            div.innerHTML = `
+                                <div>
+                                    <strong>${p.waste_type}</strong>
+                                    <div style="font-size:0.75rem;color:var(--text-muted);">${p.block_name} (${p.room_number})</div>
+                                    <div style="font-size:0.7rem;color:var(--text-muted);">${dateStr}</div>
+                                </div>
+                                <span class="status-badge ${p.status.toLowerCase()}">${p.status}</span>
+                            `;
+                            myList.appendChild(div);
+                        });
+                    }
+
+                    // Render markers on map
+                    clearPickupMarkers();
+
+                    pickups.forEach(p => {
+                        // Generate deterministic coordinates inside the BHC campus based on block_name
+                        let blockLat = 10.8156;
+                        let blockLng = 78.67336;
+
+                        if (p.block_name === "Computer Science Block") { blockLat = 10.8159; blockLng = 78.6736; }
+                        else if (p.block_name === "Admin Block") { blockLat = 10.8157; blockLng = 78.6728; }
+                        else if (p.block_name === "Canteen Area") { blockLat = 10.8152; blockLng = 78.6731; }
+                        else if (p.block_name === "Golden Jubilee Block") { blockLat = 10.8162; blockLng = 78.6732; }
+                        else if (p.block_name === "Schwartz Hostel") { blockLat = 10.8148; blockLng = 78.6735; }
+                        else if (p.block_name === "All Saints Hostel") { blockLat = 10.8149; blockLng = 78.6725; }
+                        else if (p.block_name === "Library Block") { blockLat = 10.8160; blockLng = 78.6727; }
+
+                        // Add small jitter based on pickup ID so markers don't overlap completely
+                        const seed = p.id;
+                        const latJitter = (Math.sin(seed) * 0.0001);
+                        const lngJitter = (Math.cos(seed) * 0.0001);
+                        const markerLat = blockLat + latJitter;
+                        const markerLng = blockLng + lngJitter;
+
+                        let color = "#f59e0b"; // pending
+                        if (p.status === "Claimed") color = "#3b82f6";
+                        if (p.status === "Completed") color = "#10b981";
+
+                        const customIcon = L.divIcon({
+                            className: 'custom-div-icon',
+                            html: `<div style="background-color:${color};width:14px;height:14px;border-radius:50%;border:2px solid white;box-shadow:0 0 8px rgba(0,0,0,0.5);"></div>`,
+                            iconSize: [14, 14],
+                            iconAnchor: [7, 7]
+                        });
+
+                        const marker = L.marker([markerLat, markerLng], { icon: customIcon }).addTo(pickupMapObj);
+
+                        let popupHtml = `
+                            <div style="color:#0f172a;font-family:'Outfit';">
+                                <h4 style="margin-bottom:4px;">${p.waste_type}</h4>
+                                <p style="font-size:0.8rem;margin-bottom:2px;"><b>Requester:</b> ${p.requester}</p>
+                                <p style="font-size:0.8rem;margin-bottom:2px;"><b>Campus Location:</b> ${p.block_name}</p>
+                                <p style="font-size:0.8rem;margin-bottom:2px;"><b>Room/Lab:</b> ${p.room_number}</p>
+                                <p style="font-size:0.8rem;margin-bottom:6px;"><b>Collector:</b> ${p.collector || 'Unassigned (Waiting)'}</p>
+                                <p style="font-size:0.8rem;margin-bottom:8px;"><b>Scheduled:</b> ${new Date(p.date_time).toLocaleString()}</p>
+                                <p style="font-size:0.8rem;margin-bottom:8px;"><b>Status:</b> <span style="font-weight:700;color:${color}">${p.status}</span></p>
+                        `;
+
+                        // Add claim actions if in Driver Mode
+                        if (isDriverMode) {
+                            if (p.status === "Pending") {
+                                popupHtml += `<button onclick="updatePickupStatus(${p.id}, 'Claimed')" style="background:#3b82f6;color:white;border:none;padding:5px 10px;border-radius:5px;cursor:pointer;font-weight:600;width:100%;">Claim Pickup</button>`;
+                            } else if (p.status === "Claimed" && p.claimed_by === currentUser.id) {
+                                popupHtml += `<button onclick="updatePickupStatus(${p.id}, 'Completed')" style="background:#10b981;color:white;border:none;padding:5px 10px;border-radius:5px;cursor:pointer;font-weight:600;width:100%;">Mark Collected</button>`;
+                            }
+                        }
+
+                        popupHtml += `</div>`;
+                        marker.bindPopup(popupHtml);
+                        pickupMarkers.push(marker);
+                    });
+                });
+        }
+
+        function clearPickupMarkers() {
+            pickupMarkers.forEach(m => pickupMapObj.removeLayer(m));
+            pickupMarkers = [];
+        }
+
+        function toggleDriverMode(toggle) {
+            isDriverMode = toggle.checked;
+            loadPickups();
+        }
+
+        function submitPickup() {
+            const waste_type = document.getElementById('pickupType').value;
+            const block_name = document.getElementById('pickupBlock').value;
+            const room_number = document.getElementById('pickupRoom').value.trim();
+            const date_time = document.getElementById('pickupDateTime').value;
+
+            if (!room_number || !date_time) {
+                alert("Please fill in room/lab number and preferred schedule date.");
+                return;
+            }
+
+            fetch(API_URL + "/api/pickups", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    user_id: currentUser.id,
+                    waste_type,
+                    block_name,
+                    room_number,
+                    date_time
+                })
+            })
+                .then(res => res.json())
+                .then(data => {
+                    alert(data.message);
+                    document.getElementById('pickupRoom').value = '';
+                    document.getElementById('pickupDateTime').value = '';
+
+                    loadPickups();
+                });
+        }
+
+        function updatePickupStatus(pickup_id, status) {
+            fetch(API_URL + "/api/pickups/claim", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    pickup_id,
+                    driver_id: currentUser.id,
+                    status
+                })
+            })
+                .then(res => res.json())
+                .then(data => {
+                    pickupMapObj.closePopup();
+                    loadPickups();
+
+                    if (status === "Completed") {
+                        currentUser.points += 50;
+                        localStorage.setItem('eco_user', JSON.stringify(currentUser));
+                    }
+                });
+        }
+
+        // --- HUBS MAP SYSTEM ---
+        // Placing mock collection centers specifically inside Bishop Heber College Campus bounds
+        const MOCK_HUBS = [
+            { id: 1, name: "CS Block E-Waste Hub", lat: 10.8159, lng: 78.6736, type: "E-Waste & Electronics", hours: "9:00 AM - 5:00 PM" },
+            { id: 2, name: "Main Canteen Organic Compost Pit", lat: 10.8152, lng: 78.6731, type: "Food & Organic Waste Only", hours: "Open 24/7" },
+            { id: 3, name: "Admin Block Paper recycling", lat: 10.8157, lng: 78.6728, type: "Papers, Notebooks & Cardboard", hours: "8:00 AM - 6:00 PM" },
+            { id: 4, name: "Schwartz Hostel Metal & Plastic Hub", lat: 10.8148, lng: 78.6735, type: "Plastics, Bottles & Cans", hours: "8:00 AM - 8:00 PM" },
+            { id: 5, name: "Golden Jubilee General Waste Depot", lat: 10.8162, lng: 78.6732, type: "Non-recyclables & General", hours: "7:00 AM - 9:00 PM" }
+        ];
+
+        function initHubsMap() {
+            if (hubsMapObj) return;
+
+            const mapCenter = [10.8156, 78.67336];
+            hubsMapObj = L.map('hubsMap').setView(mapCenter, 17);
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(hubsMapObj);
+
+            setTimeout(() => { hubsMapObj.invalidateSize() }, 100);
+
+            // Populate static hubs list on sidebar
+            const list = document.getElementById('hubsList');
+            list.innerHTML = '';
+
+            MOCK_HUBS.forEach(hub => {
+                // Add marker
+                const customIcon = L.divIcon({
+                    className: 'custom-div-icon',
+                    html: `<div style="background-color:#10b981;width:16px;height:16px;border-radius:50%;border:3px solid white;box-shadow:0 0 10px rgba(16,185,129,0.6);"></div>`,
+                    iconSize: [16, 16],
+                    iconAnchor: [8, 8]
+                });
+
+                const marker = L.marker([hub.lat, hub.lng], { icon: customIcon }).addTo(hubsMapObj);
+                marker.bindPopup(`
+                    <div style="color:#0f172a;font-family:'Outfit';">
+                        <h4 style="margin-bottom:4px;">${hub.name}</h4>
+                        <p style="font-size:0.8rem;margin-bottom:2px;"><b>Accepts:</b> ${hub.type}</p>
+                        <p style="font-size:0.8rem;"><b>Timings:</b> ${hub.hours}</p>
+                    </div>
+                `);
+
+                // Add to list UI
+                const card = document.createElement('div');
+                card.className = 'pickup-item-mini';
+                card.style.cursor = 'pointer';
+                card.onclick = () => {
+                    hubsMapObj.setView([hub.lat, hub.lng], 18);
+                    marker.openPopup();
+                };
+                card.innerHTML = `
+                    <div>
+                        <strong>${hub.name}</strong>
+                        <div style="font-size:0.75rem;color:var(--text-muted);">${hub.type}</div>
+                        <div style="font-size:0.75rem;color:var(--primary);margin-top:4px;"><i class="fa-solid fa-clock"></i> ${hub.hours}</div>
+                    </div>
+                `;
+                list.appendChild(card);
+            });
+        }
+
+        // --- CAMPUS RECYCLING GUIDE LOGIC ---
+        const GUIDE_ITEMS = [
+            { name: "Plastic Water Bottle", category: "plastic", categoryLabel: "Recyclable (Plastic)", icon: "fa-bottle-water", color: "blue", bin: "Blue Bin (Recyclables)", points: 10, co2: "1.2 kg", desc: "Rinse container, empty all liquid, and crush to save bin space before disposing.", hub: "Schwartz Hostel Metal & Plastic Hub" },
+            { name: "Soda / Beverage Can", category: "metal", categoryLabel: "Recyclable (Metal)", icon: "fa-glass-water", color: "red", bin: "Red Bin (Metal Recyclables)", points: 15, co2: "1.8 kg", desc: "Rinse out beverage residue. Fully recyclable aluminum. Do not crush tab separate.", hub: "Main Canteen Metal Area" },
+            { name: "Broken Lab Keyboard", category: "ewaste", categoryLabel: "E-Waste / Hazardous", icon: "fa-keyboard", color: "orange", bin: "Orange Bin (Special E-Waste Collection)", points: 25, co2: "2.5 kg", desc: "Electronic keys contain plastic and copper circuits. Drop at Computer Science E-Waste Hub.", hub: "CS Block E-Waste Hub" },
+            { name: "Notebook / Exam Answer Script", category: "paper", categoryLabel: "Recyclable (Paper/Cardboard)", icon: "fa-book-open", color: "blue", bin: "Blue Bin (Recyclables)", points: 8, co2: "0.9 kg", desc: "Remove plastic bindings or covers if present. Place in paper bin in classrooms.", hub: "Admin Block Paper Recycling" },
+            { name: "Canteen Food Scraps", category: "organic", categoryLabel: "Organic Waste", icon: "fa-apple-whole", color: "green", bin: "Green Bin (Compost)", points: 5, co2: "0.4 kg", desc: "Discard pure food leftovers. Do not mix with plastic plates, forks, or packaging.", hub: "Main Canteen Organic Compost Pit" },
+            { name: "Aluminum Food Wrap", category: "metal", categoryLabel: "Recyclable (Metal)", icon: "fa-scroll", color: "red", bin: "Red Bin (Metal Recyclables)", points: 15, co2: "1.8 kg", desc: "Ensure wrap is mostly clean and free of thick grease. Crinkle into a compact ball.", hub: "Main Canteen Metal Area" },
+            { name: "Cardboard Packaging Box", category: "paper", categoryLabel: "Recyclable (Paper/Cardboard)", icon: "fa-box", color: "blue", bin: "Blue Bin (Recyclables)", points: 8, co2: "0.9 kg", desc: "Flatten the box entirely. Keep out of damp areas to prevent cardboard degradation.", hub: "Admin Block Paper Recycling" },
+            { name: "Rechargeable AA Batteries", category: "ewaste", categoryLabel: "E-Waste / Hazardous", icon: "fa-battery-three-quarters", color: "orange", bin: "Orange Bin (Special E-Waste Collection)", points: 25, co2: "2.5 kg", desc: "Batteries leak toxic chemicals. Keep out of regular trash. Must use E-waste hubs.", hub: "CS Block E-Waste Hub" },
+            { name: "Disposable Plastic Cups", category: "plastic", categoryLabel: "Recyclable (Plastic)", icon: "fa-cup-straw", color: "blue", bin: "Blue Bin (Recyclables)", points: 10, co2: "1.2 kg", desc: "Rinse tea/coffee traces. Empty completely. Flatten cups before disposing.", hub: "Schwartz Hostel Metal & Plastic Hub" },
+            { name: "Cardboard Paper Cups", category: "paper", categoryLabel: "Recyclable (Paper/Cardboard)", icon: "fa-mug-hot", color: "blue", bin: "Blue Bin (Recyclables)", points: 8, co2: "0.9 kg", desc: "Paper-based cups with thin wax lining are recyclable once completely dry.", hub: "Admin Block Paper Recycling" },
+            { name: "Defective LED/Light Bulbs", category: "ewaste", categoryLabel: "E-Waste / Hazardous", icon: "fa-lightbulb", color: "orange", bin: "Orange Bin (Special E-Waste Collection)", points: 25, co2: "2.5 kg", desc: "Contains mercury vapors. Handle carefully. Drop off at any designated E-waste hub.", hub: "CS Block E-Waste Hub" },
+            { name: "Canteen Palm Leaf Plates", category: "organic", categoryLabel: "Organic Waste", icon: "fa-leaf", color: "green", bin: "Green Bin (Compost)", points: 5, co2: "0.4 kg", desc: "Natural biodegradable palm leaves (Donnai). Discard directly into canteen compost pits.", hub: "Main Canteen Organic Compost Pit" }
+        ];
+
+        let activeGuideFilter = 'all';
+
+        function renderGuide(items) {
+            const grid = document.getElementById('guideGrid');
+            grid.innerHTML = '';
+
+            if (items.length === 0) {
+                grid.innerHTML = `<div style="grid-column: 1/-1; text-align:center; color:var(--text-muted); padding:40px;">No items match your search query.</div>`;
+                return;
+            }
+
+            items.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'widget';
+                card.style.display = 'flex';
+                card.style.flexDirection = 'column';
+                card.style.gap = '12px';
+
+                let textCol = 'var(--general-color)';
+                if (item.category === 'plastic') textCol = 'var(--plastic-color)';
+                else if (item.category === 'paper') textCol = 'var(--paper-color)';
+                else if (item.category === 'organic') textCol = 'var(--organic-color)';
+                else if (item.category === 'metal') textCol = 'var(--metal-color)';
+                else if (item.category === 'ewaste') textCol = 'var(--ewaste-color)';
+
+                card.innerHTML = `
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span class="status-badge ${item.category === 'ewaste' ? 'pending' : item.category === 'plastic' ? 'claimed' : item.category === 'organic' ? 'completed' : item.category === 'paper' ? 'claimed' : 'completed'}" style="text-transform: capitalize; background: rgba(255,255,255,0.03); color: ${textCol};">
+                            ${item.categoryLabel}
+                        </span>
+                        <div style="font-size:1.3rem; color:${textCol};"><i class="fa-solid ${item.icon}"></i></div>
+                    </div>
+                    <h3 style="font-size:1.1rem; font-weight:700; color: #fff;">${item.name}</h3>
+                    <p style="font-size:0.8rem; color:var(--text-muted); line-height:1.4; flex-grow:1;">${item.desc}</p>
+                    <div style="border-top: 1px solid var(--border-color); padding-top:10px; display:flex; flex-direction:column; gap:6px; font-size:0.75rem;">
+                        <div style="display:flex; justify-content:space-between;">
+                            <span style="color:var(--text-muted);">Dispose in:</span>
+                            <span style="font-weight:600; color:var(--text-main);">${item.bin}</span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between;">
+                            <span style="color:var(--text-muted);">Points Awarded:</span>
+                            <span style="font-weight:700; color:var(--primary);">+${item.points} pts</span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between;">
+                            <span style="color:var(--text-muted);">Carbon Offset:</span>
+                            <span style="font-weight:700; color:#10b981;">${item.co2}</span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between;">
+                            <span style="color:var(--text-muted);">Nearest Hub:</span>
+                            <span style="font-weight:600; color:var(--text-muted);">${item.hub}</span>
+                        </div>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        function filterGuide(category) {
+            activeGuideFilter = category;
+
+            // Update filter button styles
+            const filterContainer = document.getElementById('guideFilters');
+            filterContainer.querySelectorAll('button').forEach(btn => {
+                btn.className = 'btn';
+                btn.style.background = 'rgba(255,255,255,0.05)';
+                btn.style.color = 'var(--text-muted)';
+                btn.style.border = '1px solid var(--border-color)';
+            });
+
+            const activeBtn = document.getElementById(`filter-${category}`);
+            activeBtn.className = 'btn btn-gold';
+            activeBtn.style.background = '';
+            activeBtn.style.color = '';
+            activeBtn.style.border = '';
+
+            applyGuideFiltersAndSearch();
+        }
+
+        function searchGuide() {
+            applyGuideFiltersAndSearch();
+        }
+
+        function applyGuideFiltersAndSearch() {
+            const query = document.getElementById('guideSearchInput').value.trim().toLowerCase();
+
+            let filtered = GUIDE_ITEMS;
+            if (activeGuideFilter !== 'all') {
+                filtered = filtered.filter(item => item.category === activeGuideFilter);
+            }
+
+            if (query) {
+                filtered = filtered.filter(item => item.name.toLowerCase().includes(query) || item.desc.toLowerCase().includes(query));
+            }
+
+            renderGuide(filtered);
+        }
+
+        // --- PROFILE & AVATAR SYSTEM HELPER FUNCTIONS ---
+        function updateAvatarUI() {
+            if (!currentUser) return;
+
+            // Append cache busting parameter to prevent image load issues on same URL
+            const avatarUrl = currentUser.avatar_url ? `${API_URL}/${currentUser.avatar_url}?v=${new Date().getTime()}` : '';
+
+            // Sidebar Bottom Avatar
+            const avatarImg = document.getElementById('avatarImage');
+            const avatarLet = document.getElementById('avatarLetter');
+            if (currentUser.avatar_url) {
+                if (avatarImg) {
+                    avatarImg.src = avatarUrl;
+                    avatarImg.style.display = 'block';
+                }
+                if (avatarLet) {
+                    avatarLet.style.display = 'none';
+                }
+            } else {
+                if (avatarImg) avatarImg.style.display = 'none';
+                if (avatarLet) {
+                    avatarLet.style.display = 'flex';
+                    avatarLet.innerText = currentUser.username.charAt(0).toUpperCase();
+                }
+            }
+
+            // Profile Tab Avatar
+            const tabAvatarImg = document.getElementById('profileTabAvatarImage');
+            const tabAvatarLet = document.getElementById('profileTabAvatarLetter');
+            if (tabAvatarImg && tabAvatarLet) {
+                if (currentUser.avatar_url) {
+                    tabAvatarImg.src = avatarUrl;
+                    tabAvatarImg.style.display = 'block';
+                    tabAvatarLet.style.display = 'none';
+                } else {
+                    tabAvatarImg.style.display = 'none';
+                    tabAvatarLet.style.display = 'flex';
+                    tabAvatarLet.innerText = currentUser.username.charAt(0).toUpperCase();
+                }
+            }
+        }
+
+        function updateProfileTabDetails() {
+            if (!currentUser) return;
+
+            // Username and title
+            document.getElementById('profileNameDisplay').innerText = currentUser.username;
+            document.getElementById('profileRoleDisplay').innerText = `Verified ${currentUser.role || 'Student'}`;
+
+            // Form inputs
+            document.getElementById('profileUsernameInput').value = currentUser.username;
+            document.getElementById('profileDepartmentInput').value = currentUser.department || "Computer Science";
+            document.getElementById('profileHostelInput').value = currentUser.hostel || "Day Scholar";
+            document.getElementById('profilePasswordInput').value = ''; // clear password input
+            document.getElementById('profileCurrentPasswordInput').value = ''; // clear current password input
+
+            // Populate new BHC detailed fields
+            document.getElementById('profileRegNoInput').value = currentUser.reg_no || '';
+            document.getElementById('profilePhoneInput').value = currentUser.phone || '';
+            document.getElementById('profileEmailInput').value = currentUser.email || '';
+            document.getElementById('profileClassInput').value = currentUser.class_name || '';
+            document.getElementById('profileSectionInput').value = currentUser.section || '';
+            document.getElementById('profileShiftInput').value = currentUser.shift || 'Shift I';
+
+            // Stats values
+            document.getElementById('profilePointsVal').innerText = currentUser.points;
+            document.getElementById('profileCO2Val').innerText = `${parseFloat(currentUser.co2_saved).toFixed(1)} kg`;
+
+            // Fetch leaderboard rank for the profile tab
+            fetch(API_URL + "/api/leaderboard")
+                .then(res => res.json())
+                .then(leaders => {
+                    const rank = leaders.findIndex(l => l.username === currentUser.username) + 1;
+                    document.getElementById('profileRankVal').innerText = rank > 0 ? "#" + rank : "#--";
+                });
+
+            updateAvatarUI();
+        }
+
+        function triggerAvatarSelect() {
+            document.getElementById('avatarFileInput').click();
+        }
+
+        function handleAvatarChange(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const formData = new FormData();
+            formData.append("avatar", file);
+            formData.append("user_id", currentUser.id);
+
+            fetch(API_URL + "/api/profile/avatar", {
+                method: "POST",
+                body: formData
+            })
+                .then(res => {
+                    if (!res.ok) {
+                        return res.json().then(err => { throw new Error(err.error || "Failed to upload avatar") });
+                    }
+                    return res.json();
+                })
+                .then(data => {
+                    currentUser = data.user;
+                    localStorage.setItem('eco_user', JSON.stringify(currentUser));
+                    updateAvatarUI();
+                    updateProfileTabDetails();
+                    alert("Profile picture updated successfully!");
+                })
+                .catch(err => {
+                    alert(err.message);
+                    console.error(err);
+                });
+        }
+
+        function saveProfileChanges() {
+            const username = document.getElementById('profileUsernameInput').value.trim();
+            const department = document.getElementById('profileDepartmentInput').value;
+            const hostel = document.getElementById('profileHostelInput').value;
+            const password = document.getElementById('profilePasswordInput').value;
+
+            // Read new BHC detailed fields
+            const reg_no = document.getElementById('profileRegNoInput').value.trim();
+            const phone = document.getElementById('profilePhoneInput').value.trim();
+            const email = document.getElementById('profileEmailInput').value.trim();
+            const class_name = document.getElementById('profileClassInput').value.trim();
+            const section = document.getElementById('profileSectionInput').value.trim();
+            const shift = document.getElementById('profileShiftInput').value;
+            const current_password = document.getElementById('profileCurrentPasswordInput').value;
+
+            if (!username) {
+                alert("Username is required.");
+                return;
+            }
+
+            if (password && !current_password) {
+                alert("Current password is required to change your password.");
+                return;
+            }
+
+            const bodyObj = {
+                user_id: currentUser.id,
+                username,
+                department,
+                hostel,
+                reg_no,
+                phone,
+                email,
+                class_name,
+                section,
+                shift
+            };
+
+            if (password) {
+                bodyObj.password = password;
+                bodyObj.current_password = current_password;
+            }
+
+            fetch(API_URL + "/api/profile/update", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(bodyObj)
+            })
+                .then(res => {
+                    if (!res.ok) {
+                        return res.json().then(err => { throw new Error(err.error || "Failed to update profile") });
+                    }
+                    return res.json();
+                })
+                .then(data => {
+                    currentUser = data.user;
+                    localStorage.setItem('eco_user', JSON.stringify(currentUser));
+
+                    // Update header name & user displays
+                    document.getElementById('profileUsername').innerText = currentUser.username;
+                    document.getElementById('dashWelcomeName').innerText = currentUser.username;
+                    document.getElementById('userDisplayDept').innerText = currentUser.department || "General";
+                    document.getElementById('userDisplayHostel').innerText = currentUser.hostel || "Day Scholar";
+
+                    // Update dynamic location
+                    const loc = DEPT_LOCATIONS[currentUser.department] || "Main Campus Block";
+                    const locEl = document.getElementById('userDisplayDeptLoc');
+                    if (locEl) locEl.innerText = loc;
+
+                    updateProfileTabDetails();
+                    alert("Profile details updated successfully!");
+                })
+                .catch(err => {
+                    alert(err.message);
+                });
+        }
+
+        // BHC Password Recovery Routines
+        let forgotUserId = null;
+
+        function openForgotPasswordModal() {
+            document.getElementById('forgotPasswordModal').style.display = 'flex';
+            document.getElementById('forgotStep1').style.display = 'block';
+            document.getElementById('forgotStep2').style.display = 'none';
+            document.getElementById('forgotIdent').value = '';
+            document.getElementById('forgotOTP').value = '';
+            document.getElementById('forgotNewPassword').value = '';
+        }
+
+        function closeForgotPasswordModal() {
+            document.getElementById('forgotPasswordModal').style.display = 'none';
+        }
+
+        function backToRequestOTP() {
+            document.getElementById('forgotStep1').style.display = 'block';
+            document.getElementById('forgotStep2').style.display = 'none';
+            document.getElementById('forgotOTP').value = '';
+            document.getElementById('forgotNewPassword').value = '';
+        }
+
+        function requestResetOTP() {
+            const usernameOrReg = document.getElementById('forgotIdent').value.trim();
+            if (!usernameOrReg) {
+                alert("Please enter your Username or Registration Number.");
+                return;
+            }
+
+            fetch(API_URL + "/api/forgot-password/request", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ username_or_reg: usernameOrReg })
+            })
+                .then(res => {
+                    if (!res.ok) {
+                        return res.json().then(err => { throw new Error(err.error || "Request failed") });
+                    }
+                    return res.json();
+                })
+                .then(data => {
+                    forgotUserId = data.user_id;
+
+                    // Show SMS/Email simulation popup
+                    document.getElementById('smsSimPhone').innerText = data.masked_phone;
+                    document.getElementById('smsSimText').innerText = data.sms_simulation;
+                    document.getElementById('emailSimEmail').innerText = data.masked_email;
+                    document.getElementById('emailSimText').innerText = data.email_simulation;
+                    document.getElementById('communicationSimulation').style.display = 'block';
+
+                    // Update text and toggle steps
+                    document.getElementById('otpDestInfo').innerText = `OTP sent to your registered mobile (${data.masked_phone}) and email (${data.masked_email}).`;
+                    document.getElementById('forgotStep1').style.display = 'none';
+                    document.getElementById('forgotStep2').style.display = 'block';
+                })
+                .catch(err => {
+                    alert(err.message);
+                });
+        }
+
+        function verifyAndResetPassword() {
+            const otp = document.getElementById('forgotOTP').value.trim();
+            const newPassword = document.getElementById('forgotNewPassword').value;
+
+            if (!otp || !newPassword) {
+                alert("Please fill in both the OTP and the new password.");
+                return;
+            }
+
+            fetch(API_URL + "/api/forgot-password/reset", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    user_id: forgotUserId,
+                    otp: otp,
+                    new_password: newPassword
+                })
+            })
+                .then(res => {
+                    if (!res.ok) {
+                        return res.json().then(err => { throw new Error(err.error || "Reset failed") });
+                    }
+                    return res.json();
+                })
+                .then(data => {
+                    alert(data.message);
+                    closeForgotPasswordModal();
+                    closeCommunicationPopup();
+                    if (!isLoginMode) {
+                        toggleAuthMode();
+                    }
+                })
+                .catch(err => {
+                    alert(err.message);
+                });
+        }
+
+        function closeCommunicationPopup() {
+            document.getElementById('communicationSimulation').style.display = 'none';
+        }
+
+
+    </script>
+</body>
+
+</html>

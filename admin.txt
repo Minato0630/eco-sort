@@ -1,0 +1,129 @@
+========================================================================
+                      BHC ECOSORT ADMINISTRATION CREDENTIALS
+========================================================================
+
+Use the following logins to access the administrative dashboards and test
+the hierarchical role promotion features.
+
+1. SUPERIOR ADMIN (Global Controller)
+--------------------------------------
+This account can manage all department admins, collectors, and students across 
+every college branch. It has full data transparency and model retraining access.
+
+   Username: super_admin
+   Password: superpass123
+
+
+2. DEPARTMENT ADMINS (Branch Specific)
+--------------------------------------
+These accounts can ONLY view and promote students belonging to their own 
+respective departments. They are responsible for appointing collectors locally.
+
+   --- ARTS & HUMANITIES DIVISION ---
+
+   - Commerce:
+     Username: admin_commerce
+     Password: commerceadmin123
+
+   - Economics:
+     Username: admin_economics
+     Password: economicsadmin123
+
+   - English:
+     Username: admin_english
+     Password: englishadmin123
+
+   - History:
+     Username: admin_history
+     Password: historyadmin123
+
+   - Management Studies (BBA):
+     Username: admin_mgmt
+     Password: mgmtadmin123
+
+   - Social Work:
+     Username: admin_social
+     Password: socialadmin123
+
+   - Tamil:
+     Username: admin_tamil
+     Password: tamiladmin123
+
+
+   --- SCIENCE DIVISION ---
+
+   - Actuarial Science:
+     Username: admin_actuarial
+     Password: actuarialadmin123
+
+   - Aviation:
+     Username: admin_aviation
+     Password: aviationadmin123
+
+   - Bioinformatics:
+     Username: admin_bioinformatics
+     Password: bioinformaticsadmin123
+
+   - Biotechnology:
+     Username: admin_biotech
+     Password: biotechadmin123
+
+   - Botany:
+     Username: admin_botany
+     Password: botanyadmin123
+
+   - Chemistry:
+     Username: admin_chemistry
+     Password: chemistryadmin123
+
+   - Computer Application (BCA):
+     Username: admin_ca
+     Password: caadmin123
+
+   - Computer Science:
+     Username: admin_cs
+     Password: csadmin123
+
+   - Data Science:
+     Username: admin_ds
+     Password: dsadmin123
+
+   - Environmental Sciences:
+     Username: admin_env
+     Password: envadmin123
+
+   - Information Technology (IT):
+     Username: admin_it
+     Password: itadmin123
+
+   - Library & Inf. Science:
+     Username: admin_lis
+     Password: lisadmin123
+
+   - Mathematics:
+     Username: admin_math
+     Password: mathadmin123
+
+   - Nutrition & Dietetics:
+     Username: admin_nd
+     Password: ndadmin123
+
+   - Physics:
+     Username: admin_physics
+     Password: physicsadmin123
+
+   - Visual Communication:
+     Username: admin_viscom
+     Password: viscomadmin123
+
+   - Zoology:
+     Username: admin_zoology
+     Password: zoologyadmin123
+
+
+3. DEFAULT COLLECTOR (For Demo Runs)
+-------------------------------------
+   Username: collector_heber
+   Password: collectpass123
+
+========================================================================
