@@ -19,6 +19,18 @@
       "dest": "api/index.py"
     },
     {
+      "src": "/$",
+      "dest": "frontend/index.html"
+    },
+    {
+      "src": "/admin$",
+      "dest": "frontend/admin.html"
+    },
+    {
+      "src": "/collector$",
+      "dest": "frontend/collector.html"
+    },
+    {
       "src": "/uploads/(.*)",
       "dest": "frontend/uploads/$1"
     },
