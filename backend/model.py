@@ -9,20 +9,26 @@ TFLITE_AVAILABLE = False
 tflite = None
 
 try:
-    import tflite_runtime.interpreter as tflite_rt
-    tflite = tflite_rt
+    import ai_edge_litert.interpreter as ai_rt
+    tflite = ai_rt
     TFLITE_AVAILABLE = True
-    print("Loaded tflite-runtime successfully for ML inference!")
+    print("Loaded LiteRT (ai_edge_litert) successfully for ML inference!")
 except ImportError:
     try:
-        import tensorflow as tf
-        tflite = tf.lite
+        import tflite_runtime.interpreter as tflite_rt
+        tflite = tflite_rt
         TFLITE_AVAILABLE = True
-        print("Loaded tensorflow.lite from full installation successfully!")
+        print("Loaded tflite-runtime successfully for ML inference!")
     except ImportError:
-        TFLITE_AVAILABLE = False
-        tflite = None
-        print("TFLite is not available. Falling back to mock/ImageNet.")
+        try:
+            import tensorflow as tf
+            tflite = tf.lite
+            TFLITE_AVAILABLE = True
+            print("Loaded tensorflow.lite from full installation successfully!")
+        except ImportError:
+            TFLITE_AVAILABLE = False
+            tflite = None
+            print("TFLite is not available. Falling back to mock/ImageNet.")
 
 try:
     import tensorflow as tf
