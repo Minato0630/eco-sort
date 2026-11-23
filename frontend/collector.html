@@ -247,6 +247,14 @@
         let mapObj = null;
         let markers = [];
 
+        function getAuthHeaders(contentType = 'application/json') {
+            const token = localStorage.getItem('eco_token');
+            const headers = {};
+            if (contentType) headers['Content-Type'] = contentType;
+            if (token) headers['Authorization'] = 'Bearer ' + token;
+            return headers;
+        }
+
         window.addEventListener('load', () => {
             const cachedUser = localStorage.getItem('eco_user');
             if (cachedUser) {
@@ -284,6 +292,7 @@
 
         function logout() {
             localStorage.removeItem('eco_user');
+            localStorage.removeItem('eco_token');
             window.location.href = "index.html";
         }
 
@@ -297,7 +306,9 @@
         }
 
         function loadPickups() {
-            fetch(API_URL + "/api/pickups")
+            fetch(API_URL + "/api/pickups", {
+                headers: getAuthHeaders(null)
+            })
                 .then(res => res.json())
                 .then(pickups => {
                     renderStats(pickups);
@@ -439,10 +450,9 @@
         function updateStatus(pickup_id, status) {
             fetch(API_URL + "/api/pickups/claim", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: getAuthHeaders('application/json'),
                 body: JSON.stringify({
                     pickup_id: pickup_id,
-                    driver_id: currentUser.id,
                     status: status
                 })
             })

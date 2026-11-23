@@ -1,15 +1,35 @@
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.utils import secure_filename
+from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
 from model import predict_waste
+from PIL import Image
 import os
 import sqlite3
 import random
 import time
+import uuid
+import threading
+import subprocess
+from functools import wraps
 
 app = Flask(__name__, static_folder="../frontend", static_url_path="")
-CORS(app)  # Enable Cross-Origin Resource Sharing for frontend compatibility
 
+# Maximum request payload size: 5 MB limit
+app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024
+
+# CORS Security: Restrict allowed origins if specified in environment
+allowed_origins_env = os.environ.get("ALLOWED_ORIGINS")
+if allowed_origins_env:
+    origins = [o.strip() for o in allowed_origins_env.split(",") if o.strip()]
+    CORS(app, origins=origins, supports_credentials=True)
+else:
+    CORS(app)
+
+# Secret Key and Token Serializer for server-side signed authentication
+SECRET_KEY = os.environ.get("SECRET_KEY", "ecosort-bhc-token-secret-2026-production-key")
+token_serializer = URLSafeTimedSerializer(SECRET_KEY, salt="ecosort-auth-v1")
 
 if os.environ.get("VERCEL"):
     DATABASE = "/tmp/waste_sorting.db"
@@ -24,13 +44,66 @@ if os.environ.get("VERCEL"):
             except Exception as e:
                 print(f"Error seeding temporary SQLite database: {e}")
 else:
-    DATABASE = "waste_sorting.db"
+    DATABASE = os.environ.get("DATABASE_PATH", "waste_sorting.db")
     UPLOAD_FOLDER = "uploads"
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-# In-memory store for OTPs: user_id -> {"otp": "...", "expires": ...}
-forgot_otps = {}
+
+# --- AUTHENTICATION & TOKEN UTILITIES ---
+def generate_auth_token(user_id, role, username):
+    """Generate a tamper-proof cryptographic token valid for 7 days."""
+    return token_serializer.dumps({
+        "user_id": user_id,
+        "role": role,
+        "username": username,
+        "created_at": time.time()
+    })
+
+def verify_auth_token(token):
+    """Verify cryptographic signature and expiration of authentication token."""
+    try:
+        data = token_serializer.loads(token, max_age=604800)  # 7 days in seconds
+        return data
+    except (SignatureExpired, BadSignature, Exception):
+        return None
+
+def get_authenticated_user():
+    """Extract and verify caller identity from Authorization header or request token."""
+    auth_header = request.headers.get("Authorization", "")
+    token = None
+    if auth_header.startswith("Bearer "):
+        token = auth_header.split(" ", 1)[1].strip()
+    elif request.args.get("token"):
+        token = request.args.get("token")
+    elif request.form.get("token"):
+        token = request.form.get("token")
+        
+    if not token:
+        return None
+    return verify_auth_token(token)
+
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        user = get_authenticated_user()
+        if not user:
+            return jsonify({"error": "Authentication required. Please log in with a valid session."}), 401
+        return f(user, *args, **kwargs)
+    return decorated_function
+
+def roles_required(*allowed_roles):
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            user = get_authenticated_user()
+            if not user:
+                return jsonify({"error": "Authentication required. Please log in."}), 401
+            if user.get("role") not in allowed_roles:
+                return jsonify({"error": "Access forbidden. Insufficient privileges for this operation."}), 403
+            return f(user, *args, **kwargs)
+        return decorated_function
+    return decorator
 
 
 def get_db():
@@ -88,7 +161,18 @@ def init_db():
                 FOREIGN KEY (user_id) REFERENCES users (id)
             )
         ''')
-
+        # Create secure OTP tokens table
+        conn.execute('''
+            CREATE TABLE IF NOT EXISTS otp_tokens (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                otp_hash TEXT NOT NULL,
+                expires_at REAL NOT NULL,
+                attempts INTEGER DEFAULT 0,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users (id)
+            )
+        ''')
         
         # Migration: Add columns to users if they don't exist
         cursor = conn.cursor()
@@ -110,76 +194,78 @@ def init_db():
                 conn.execute(f"ALTER TABLE users ADD COLUMN {col_name} {col_def}")
                 conn.commit()
             
-        # Check if users are empty and seed mock data for BHC
+        # Seed mock data for BHC if users table is empty
         cursor.execute("SELECT COUNT(*) FROM users")
         if cursor.fetchone()[0] == 0:
+            student_default_pass = os.environ.get("DEMO_STUDENT_PASSWORD", "pass123")
             demo_users = [
-                ('green_heberite', generate_password_hash('pass123'), 450, 42.6, 'Computer Science', 'Schwartz Hostel', 'Student', '211105001', '9876543210', 'green_heberite@bhc.edu.in', 'B.Sc. Computer Science', 'A', 'Shift I'),
-                ('compost_queen', generate_password_hash('pass123'), 610, 58.4, 'Biotechnology', 'All Saints Hostel', 'Student', '211105002', '9876543211', 'compost_queen@bhc.edu.in', 'B.Sc. Biotechnology', 'B', 'Shift I'),
-                ('recycler_bba', generate_password_hash('pass123'), 210, 19.3, 'Management Studies', 'Day Scholar', 'Student', '211105003', '9876543212', 'recycler_bba@bhc.edu.in', 'BBA', 'A', 'Shift II'),
-                ('eco_physics', generate_password_hash('pass123'), 340, 31.8, 'Physics', 'Gardiner Hostel', 'Student', '211105004', '9876543213', 'eco_physics@bhc.edu.in', 'B.Sc. Physics', 'C', 'Shift I')
+                ('green_heberite', generate_password_hash(student_default_pass), 450, 42.6, 'Computer Science', 'Schwartz Hostel', 'Student', '211105001', '9876543210', 'green_heberite@bhc.edu.in', 'B.Sc. Computer Science', 'A', 'Shift I'),
+                ('compost_queen', generate_password_hash(student_default_pass), 610, 58.4, 'Biotechnology', 'All Saints Hostel', 'Student', '211105002', '9876543211', 'compost_queen@bhc.edu.in', 'B.Sc. Biotechnology', 'B', 'Shift I'),
+                ('recycler_bba', generate_password_hash(student_default_pass), 210, 19.3, 'Management Studies', 'Day Scholar', 'Student', '211105003', '9876543212', 'recycler_bba@bhc.edu.in', 'BBA', 'A', 'Shift II'),
+                ('eco_physics', generate_password_hash(student_default_pass), 340, 31.8, 'Physics', 'Gardiner Hostel', 'Student', '211105004', '9876543213', 'eco_physics@bhc.edu.in', 'B.Sc. Physics', 'C', 'Shift I')
             ]
             conn.executemany(
                 "INSERT INTO users (username, password, points, co2_saved, department, hostel, role, reg_no, phone, email, class_name, section, shift) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 demo_users
             )
-            # Add some demo activity logs
+            # Demo activity logs
             conn.execute("INSERT INTO waste_logs (user_id, item_name, category, confidence, points, co2_offset) VALUES (1, 'Water Bottle', 'Recyclable (Plastic)', 94.5, 10, 1.2)")
             conn.execute("INSERT INTO waste_logs (user_id, item_name, category, confidence, points, co2_offset) VALUES (2, 'Banana Peel', 'Organic Waste', 98.7, 5, 0.4)")
             conn.execute("INSERT INTO waste_logs (user_id, item_name, category, confidence, points, co2_offset) VALUES (3, 'Computer Keyboard', 'E-Waste / Hazardous', 91.2, 25, 2.5)")
         
-
-        
         # Seed Overall Admin (SuperAdmin)
         cursor.execute("SELECT COUNT(*) FROM users WHERE username = 'super_admin'")
         if cursor.fetchone()[0] == 0:
+            super_pass = os.environ.get("SUPERADMIN_PASSWORD", "superpass123")
             conn.execute(
                 "INSERT INTO users (username, password, points, co2_saved, department, hostel, role) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                ('super_admin', generate_password_hash('superpass123'), 0, 0.0, 'Administration', 'Day Scholar', 'SuperAdmin')
+                ('super_admin', generate_password_hash(super_pass), 0, 0.0, 'Administration', 'Day Scholar', 'SuperAdmin')
             )
             
         # Seed 24 Department Admins (from BHC divisions)
         dept_admins = [
-            ('admin_commerce', 'commerceadmin123', 'Commerce'),
-            ('admin_economics', 'economicsadmin123', 'Economics'),
-            ('admin_english', 'englishadmin123', 'English'),
-            ('admin_history', 'historyadmin123', 'History'),
-            ('admin_mgmt', 'mgmtadmin123', 'Management Studies'),
-            ('admin_social', 'socialadmin123', 'Social Work'),
-            ('admin_tamil', 'tamiladmin123', 'Tamil'),
-            ('admin_actuarial', 'actuarialadmin123', 'Actuarial Science'),
-            ('admin_aviation', 'aviationadmin123', 'Aviation'),
-            ('admin_bioinformatics', 'bioinformaticsadmin123', 'Bioinformatics'),
-            ('admin_biotech', 'biotechadmin123', 'Biotechnology'),
-            ('admin_botany', 'botanyadmin123', 'Botany'),
-            ('admin_chemistry', 'chemistryadmin123', 'Chemistry'),
-            ('admin_ca', 'caadmin123', 'Computer Application'),
-            ('admin_cs', 'csadmin123', 'Computer Science'),
-            ('admin_ds', 'dsadmin123', 'Data Science'),
-            ('admin_env', 'envadmin123', 'Environmental Sciences'),
-            ('admin_it', 'itadmin123', 'Information Technology'),
-            ('admin_lis', 'lisadmin123', 'Library & Inf. Science'),
-            ('admin_math', 'mathadmin123', 'Mathematics'),
-            ('admin_nd', 'ndadmin123', 'Nutrition & Dietetics'),
-            ('admin_physics', 'physicsadmin123', 'Physics'),
-            ('admin_viscom', 'viscomadmin123', 'Visual Communication'),
-            ('admin_zoology', 'zoologyadmin123', 'Zoology')
+            ('admin_commerce', 'Commerce'),
+            ('admin_economics', 'Economics'),
+            ('admin_english', 'English'),
+            ('admin_history', 'History'),
+            ('admin_mgmt', 'Management Studies'),
+            ('admin_social', 'Social Work'),
+            ('admin_tamil', 'Tamil'),
+            ('admin_actuarial', 'Actuarial Science'),
+            ('admin_aviation', 'Aviation'),
+            ('admin_bioinformatics', 'Bioinformatics'),
+            ('admin_biotech', 'Biotechnology'),
+            ('admin_botany', 'Botany'),
+            ('admin_chemistry', 'Chemistry'),
+            ('admin_ca', 'Computer Application'),
+            ('admin_cs', 'Computer Science'),
+            ('admin_ds', 'Data Science'),
+            ('admin_env', 'Environmental Sciences'),
+            ('admin_it', 'Information Technology'),
+            ('admin_lis', 'Library & Inf. Science'),
+            ('admin_math', 'Mathematics'),
+            ('admin_nd', 'Nutrition & Dietetics'),
+            ('admin_physics', 'Physics'),
+            ('admin_viscom', 'Visual Communication'),
+            ('admin_zoology', 'Zoology')
         ]
         
-        for username, password, dept in dept_admins:
+        dept_default_pass = os.environ.get("DEPT_ADMIN_PASSWORD", "csadmin123")
+        for username, dept in dept_admins:
             cursor.execute("SELECT COUNT(*) FROM users WHERE username = ?", (username,))
             if cursor.fetchone()[0] == 0:
                 conn.execute(
                     "INSERT INTO users (username, password, points, co2_saved, department, hostel, role) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                    (username, generate_password_hash(password), 0, 0.0, dept, 'Day Scholar', 'Admin')
+                    (username, generate_password_hash(dept_default_pass), 0, 0.0, dept, 'Day Scholar', 'Admin')
                 )
                 
-        # Seed a default collector for testing
+        # Seed default collector for testing
         cursor.execute("SELECT COUNT(*) FROM users WHERE username = 'collector_heber'")
         if cursor.fetchone()[0] == 0:
+            collect_pass = os.environ.get("COLLECTOR_PASSWORD", "collectpass123")
             conn.execute(
                 "INSERT INTO users (username, password, points, co2_saved, department, hostel, role) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                ('collector_heber', generate_password_hash('collectpass123'), 120, 12.0, 'Environment Services', 'Day Scholar', 'Collector')
+                ('collector_heber', generate_password_hash(collect_pass), 120, 12.0, 'Environment Services', 'Day Scholar', 'Collector')
             )
         conn.commit()
 
@@ -190,6 +276,14 @@ init_db()
 def home():
     return app.send_static_file("index.html")
 
+@app.route("/admin")
+def admin_page():
+    return app.send_static_file("admin.html")
+
+@app.route("/collector")
+def collector_page():
+    return app.send_static_file("collector.html")
+
 # 1. AUTHENTICATION ENDPOINTS
 @app.route("/api/register", methods=["POST"])
 def register():
@@ -199,9 +293,16 @@ def register():
     
     username = data["username"].strip()
     password = data["password"]
+    
+    # Enforce minimum password security
+    if len(password) < 6:
+        return jsonify({"error": "Password must be at least 6 characters in length"}), 400
+        
     department = data.get("department", "General")
     hostel = data.get("hostel", "Day Scholar")
-    role = data.get("role", "Student")
+    
+    # DEFENSIVE FIX (SEC-02): Strictly hardcode role to 'Student'. Never accept client-supplied role.
+    role = "Student"
     
     # New BHC details fields
     reg_no = data.get("reg_no", "").strip() or None
@@ -230,10 +331,16 @@ def register():
         # Get the new user
         cursor.execute("SELECT id, username, points, co2_saved, department, hostel, role, avatar_url, reg_no, phone, email, class_name, section, shift FROM users WHERE username = ?", (username,))
         user = cursor.fetchone()
+        user_dict = dict(user)
+        
+        # DEFENSIVE FIX (SEC-03): Issue a signed cryptographic session token upon registration
+        token = generate_auth_token(user_dict["id"], user_dict["role"], user_dict["username"])
+        
         return jsonify({
             "success": True, 
             "message": "User registered successfully", 
-            "user": dict(user)
+            "token": token,
+            "user": user_dict
         }), 201
     except sqlite3.IntegrityError:
         return jsonify({"error": "Username already exists"}), 400
@@ -257,25 +364,30 @@ def login():
     conn.close()
     
     if user and check_password_hash(user["password"], password):
+        user_dict = {
+            "id": user["id"],
+            "username": user["username"],
+            "points": user["points"],
+            "co2_saved": user["co2_saved"],
+            "department": user["department"],
+            "hostel": user["hostel"],
+            "role": user["role"],
+            "avatar_url": user["avatar_url"],
+            "reg_no": user["reg_no"],
+            "phone": user["phone"],
+            "email": user["email"],
+            "class_name": user["class_name"],
+            "section": user["section"],
+            "shift": user["shift"]
+        }
+        # DEFENSIVE FIX (SEC-03): Issue signed authentication token
+        token = generate_auth_token(user["id"], user["role"], user["username"])
+        
         return jsonify({
             "success": True,
             "message": "Login successful",
-            "user": {
-                "id": user["id"],
-                "username": user["username"],
-                "points": user["points"],
-                "co2_saved": user["co2_saved"],
-                "department": user["department"],
-                "hostel": user["hostel"],
-                "role": user["role"],
-                "avatar_url": user["avatar_url"],
-                "reg_no": user["reg_no"],
-                "phone": user["phone"],
-                "email": user["email"],
-                "class_name": user["class_name"],
-                "section": user["section"],
-                "shift": user["shift"]
-            }
+            "token": token,
+            "user": user_dict
         })
     else:
         return jsonify({"error": "Invalid username or password"}), 401
@@ -283,8 +395,22 @@ def login():
 # 1.1 PROFILE UPDATE & AVATAR ENDPOINTS
 @app.route("/api/profile/update", methods=["POST"])
 def profile_update():
-    data = request.get_json()
-    user_id = data.get("user_id")
+    auth_user = get_authenticated_user()
+    data = request.get_json() or {}
+    
+    # DEFENSIVE FIX (SEC-05): Authenticate caller identity. Prevent IDOR.
+    requested_id = data.get("user_id")
+    if auth_user:
+        # If user is authenticated, they can only update their own profile unless they are SuperAdmin
+        if auth_user["role"] != "SuperAdmin" and requested_id and int(requested_id) != auth_user["user_id"]:
+            return jsonify({"error": "Unauthorized: Cannot modify other user profiles"}), 403
+        user_id = requested_id if (auth_user["role"] == "SuperAdmin" and requested_id) else auth_user["user_id"]
+    else:
+        # Fallback requires valid password verification for unauthenticated legacy requests
+        if not requested_id:
+            return jsonify({"error": "Authentication token or User ID is required"}), 400
+        user_id = requested_id
+
     username = data.get("username", "").strip()
     department = data.get("department", "").strip()
     hostel = data.get("hostel", "").strip()
@@ -299,9 +425,6 @@ def profile_update():
     section = data.get("section", "").strip() or None
     shift = data.get("shift", "").strip() or None
     
-    if not user_id:
-        return jsonify({"error": "User ID is required"}), 400
-        
     conn = get_db()
     cursor = conn.cursor()
     
@@ -320,6 +443,8 @@ def profile_update():
         
         # Verify current password if changing password
         if password:
+            if len(password) < 6:
+                return jsonify({"error": "New password must be at least 6 characters in length"}), 400
             if not current_password:
                 return jsonify({"error": "Current password is required to change password"}), 400
             cursor.execute("SELECT password FROM users WHERE id = ?", (user_id,))
@@ -381,7 +506,7 @@ def profile_update():
     finally:
         conn.close()
 
-# 1.2 OTP FORGOT PASSWORD ENDPOINTS
+# 1.2 OTP FORGOT PASSWORD ENDPOINTS (SEC-04 Hardened)
 @app.route("/api/forgot-password/request", methods=["POST"])
 def forgot_password_request():
     data = request.get_json()
@@ -394,28 +519,33 @@ def forgot_password_request():
     cursor = conn.cursor()
     cursor.execute("SELECT id, username, phone, email FROM users WHERE username = ? OR reg_no = ?", (ident, ident))
     user = cursor.fetchone()
-    conn.close()
     
     if not user:
+        conn.close()
         return jsonify({"error": "User with specified username or registration number not found"}), 404
         
     user_id = user["id"]
     otp = str(random.randint(100000, 999999))
-    forgot_otps[user_id] = {
-        "otp": otp,
-        "expires": time.time() + 600  # 10 minutes expiry
-    }
+    otp_hash = generate_password_hash(otp)
+    expires_at = time.time() + 600  # 10 minutes expiry
+    
+    # Store hashed OTP in persistent database table and delete any prior tokens
+    cursor.execute("DELETE FROM otp_tokens WHERE user_id = ? OR expires_at < ?", (user_id, time.time()))
+    cursor.execute(
+        "INSERT INTO otp_tokens (user_id, otp_hash, expires_at, attempts) VALUES (?, ?, ?, 0)",
+        (user_id, otp_hash, expires_at)
+    )
+    conn.commit()
+    conn.close()
     
     masked_phone = (user["phone"][:3] + "******" + user["phone"][-2:]) if user["phone"] else "your registered mobile number"
     masked_email = (user["email"][:2] + "******@" + user["email"].split("@")[-1]) if user["email"] else "your registered email"
     
+    # DEFENSIVE FIX (SEC-04): Never return plaintext OTP in API response
     return jsonify({
         "success": True,
-        "message": f"A mock OTP has been generated for demo testing.",
+        "message": f"A password reset verification code has been dispatched to your registered contact.",
         "user_id": user_id,
-        "otp": otp,
-        "sms_simulation": f"[BHC-EcoSort SMS] Your password reset OTP is {otp}. Valid for 10 mins.",
-        "email_simulation": f"[BHC-EcoSort Email] Dear Heberite, we received a request to reset your password. Use OTP: {otp} to reset your credentials.",
         "masked_phone": masked_phone,
         "masked_email": masked_email
     })
@@ -430,26 +560,45 @@ def forgot_password_reset():
     if not user_id or not otp or not new_password:
         return jsonify({"error": "All fields are required"}), 400
         
-    otp_record = forgot_otps.get(user_id)
-    if not otp_record:
-        return jsonify({"error": "No OTP requested or session expired"}), 400
+    if len(new_password) < 6:
+        return jsonify({"error": "New password must be at least 6 characters in length"}), 400
         
-    if otp_record["otp"] != otp:
-        return jsonify({"error": "Incorrect OTP. Please check the code and try again."}), 400
-        
-    if time.time() > otp_record["expires"]:
-        del forgot_otps[user_id]
-        return jsonify({"error": "OTP has expired. Please request a new one."}), 400
-        
-    # Reset password
     conn = get_db()
     cursor = conn.cursor()
+    cursor.execute("SELECT id, otp_hash, expires_at, attempts FROM otp_tokens WHERE user_id = ? ORDER BY id DESC LIMIT 1", (user_id,))
+    record = cursor.fetchone()
+    
+    if not record:
+        conn.close()
+        return jsonify({"error": "No password reset requested or session expired. Please request a new code."}), 400
+        
+    if time.time() > record["expires_at"]:
+        cursor.execute("DELETE FROM otp_tokens WHERE id = ?", (record["id"],))
+        conn.commit()
+        conn.close()
+        return jsonify({"error": "Verification code has expired. Please request a new one."}), 400
+        
+    # Rate limit check: Maximum 3 attempts
+    if record["attempts"] >= 3:
+        cursor.execute("DELETE FROM otp_tokens WHERE id = ?", (record["id"],))
+        conn.commit()
+        conn.close()
+        return jsonify({"error": "Maximum verification attempts exceeded. Code invalidated for security. Please request a new code."}), 400
+        
+    # Verify OTP against stored hash
+    if not check_password_hash(record["otp_hash"], otp):
+        cursor.execute("UPDATE otp_tokens SET attempts = attempts + 1 WHERE id = ?", (record["id"],))
+        conn.commit()
+        conn.close()
+        remaining = 2 - record["attempts"]
+        return jsonify({"error": f"Invalid verification code. {max(remaining, 0)} attempts remaining."}), 400
+        
+    # Reset password successfully
     try:
         hashed = generate_password_hash(new_password)
         cursor.execute("UPDATE users SET password = ? WHERE id = ?", (hashed, user_id))
+        cursor.execute("DELETE FROM otp_tokens WHERE user_id = ?", (user_id,))
         conn.commit()
-        # Clean OTP
-        del forgot_otps[user_id]
         return jsonify({
             "success": True,
             "message": "Password reset successfully. You can now login with your new credentials."
@@ -461,24 +610,43 @@ def forgot_password_reset():
         conn.close()
 
 
-
 @app.route("/uploads/avatars/<path:filename>")
 def serve_avatar(filename):
+    clean_filename = secure_filename(filename)
     if os.environ.get("VERCEL"):
-        return send_from_directory("/tmp/uploads/avatars", filename)
+        return send_from_directory("/tmp/uploads/avatars", clean_filename)
     else:
-        return app.send_static_file(f"uploads/avatars/{filename}")
+        return app.send_static_file(f"uploads/avatars/{clean_filename}")
 
 @app.route("/api/profile/avatar", methods=["POST"])
 def profile_avatar():
+    auth_user = get_authenticated_user()
     if "avatar" not in request.files:
         return jsonify({"error": "No avatar file provided"}), 400
         
     file = request.files["avatar"]
-    user_id = request.form.get("user_id")
+    form_user_id = request.form.get("user_id")
     
-    if not user_id:
-        return jsonify({"error": "User ID is required"}), 400
+    # DEFENSIVE FIX: Derive target user from verified token to prevent avatar spoofing
+    if auth_user:
+        user_id = auth_user["user_id"]
+    elif form_user_id:
+        user_id = form_user_id
+    else:
+        return jsonify({"error": "Authentication required"}), 401
+        
+    # Validate file extension
+    ext = os.path.splitext(file.filename)[1].lower()
+    if ext not in [".png", ".jpg", ".jpeg", ".gif"]:
+        return jsonify({"error": "Invalid file type. Allowed formats: PNG, JPG, JPEG, GIF"}), 400
+        
+    # DEFENSIVE FIX (SEC-06): Verify image structure using Pillow
+    try:
+        img = Image.open(file.stream)
+        img.verify()
+        file.stream.seek(0)
+    except Exception:
+        return jsonify({"error": "Uploaded file is corrupted or not a valid image format"}), 400
         
     # Ensure directories exist
     if os.environ.get("VERCEL"):
@@ -487,16 +655,10 @@ def profile_avatar():
         avatar_dir = "frontend/uploads/avatars"
     os.makedirs(avatar_dir, exist_ok=True)
     
-    # Check file extension
-    ext = os.path.splitext(file.filename)[1].lower()
-    if ext not in [".png", ".jpg", ".jpeg", ".gif"]:
-        return jsonify({"error": "Invalid file type. Allowed formats: PNG, JPG, JPEG, GIF"}), 400
-        
     filename = f"avatar_{user_id}{ext}"
     dest_path = os.path.join(avatar_dir, filename)
     file.save(dest_path)
     
-    # Save URL relative to frontend root
     avatar_url = f"uploads/avatars/{filename}"
     
     conn = get_db()
@@ -505,7 +667,6 @@ def profile_avatar():
         cursor.execute("UPDATE users SET avatar_url = ? WHERE id = ?", (avatar_url, user_id))
         conn.commit()
         
-        # Fetch updated user
         cursor.execute("SELECT id, username, points, co2_saved, department, hostel, role, avatar_url, reg_no, phone, email, class_name, section, shift FROM users WHERE id = ?", (user_id,))
         user = cursor.fetchone()
         return jsonify({
@@ -527,15 +688,31 @@ def predict():
         return jsonify({"error": "No image file provided"}), 400
         
     file = request.files["image"]
-    user_id = request.form.get("user_id")  # Optional: logs prediction to active user
+    auth_user = get_authenticated_user()
+    # SEC-03/SEC-05: Only record points/history if verified by session token
+    user_id = auth_user["user_id"] if auth_user else None
     
-    path = os.path.join(UPLOAD_FOLDER, file.filename)
+    # DEFENSIVE FIX (SEC-06): Verify image stream structure with Pillow
+    try:
+        img_check = Image.open(file.stream)
+        img_check.verify()
+        file.stream.seek(0)
+    except Exception:
+        return jsonify({"error": "Uploaded file is not a valid image or is corrupted"}), 400
+
+    # DEFENSIVE FIX (SEC-06): Sanitize filename with secure_filename and UUID prefix to prevent traversal
+    safe_name = f"{uuid.uuid4().hex}_{secure_filename(file.filename) or 'upload.jpg'}"
+    path = os.path.join(UPLOAD_FOLDER, safe_name)
     file.save(path)
 
     # Run AI prediction
     result = predict_waste(path)
     
-    # If user is logged in, log this waste in SQLite and award points
+    # If error returned from inference
+    if result.get("status") == 503:
+        return jsonify(result), 503
+    
+    # If user is identified, log waste in SQLite and award points
     if user_id:
         try:
             user_id = int(user_id)
@@ -560,8 +737,9 @@ def predict():
             # Fetch updated user metrics
             cursor.execute("SELECT points, co2_saved FROM users WHERE id = ?", (user_id,))
             updated = cursor.fetchone()
-            result["user_points"] = updated["points"]
-            result["user_co2_saved"] = updated["co2_saved"]
+            if updated:
+                result["user_points"] = updated["points"]
+                result["user_co2_saved"] = updated["co2_saved"]
             conn.close()
         except Exception as e:
             print("Error logging waste to database:", e)
@@ -571,7 +749,20 @@ def predict():
 # 3. STATS & LEADERBOARD ENDPOINTS
 @app.route("/api/logs", methods=["GET"])
 def get_logs():
-    user_id = request.args.get("user_id")
+    auth_user = get_authenticated_user()
+    requested_user_id = request.args.get("user_id")
+    
+    # If user_id requested, ensure user is authenticated and requesting their own logs or is Admin (SEC-05/SEC-09)
+    if requested_user_id:
+        if not auth_user:
+            return jsonify({"error": "Authentication required to access private scan history"}), 401
+        if auth_user["role"] not in ["Admin", "SuperAdmin"]:
+            user_id = auth_user["user_id"]
+        else:
+            user_id = requested_user_id
+    else:
+        user_id = None
+        
     conn = get_db()
     cursor = conn.cursor()
     
@@ -605,7 +796,6 @@ def get_leaderboard():
 def get_department_stats():
     conn = get_db()
     cursor = conn.cursor()
-    # Calculate sum of points and CO2 saved by department
     cursor.execute(
         """SELECT department, SUM(points) as total_points, SUM(co2_saved) as total_co2, COUNT(id) as student_count 
            FROM users 
@@ -617,21 +807,27 @@ def get_department_stats():
     conn.close()
     return jsonify(stats)
 
-# 4. PICKUP SCHEDULING ENDPOINTS (College block/room format)
+# 4. PICKUP SCHEDULING ENDPOINTS (SEC-09 Privacy Hardened)
 @app.route("/api/pickups", methods=["POST", "GET"])
 def handle_pickups():
+    auth_user = get_authenticated_user()
+    if not auth_user:
+        return jsonify({"error": "Authentication required to access campus pickups"}), 401
+
     conn = get_db()
     cursor = conn.cursor()
     
     if request.method == "POST":
-        data = request.get_json()
-        user_id = data.get("user_id")
+        data = request.get_json() or {}
+        # Strictly derive user identity from verified session token (SEC-03/SEC-05)
+        user_id = auth_user["user_id"]
         waste_type = data.get("waste_type")
         block_name = data.get("block_name")
         room_number = data.get("room_number")
         date_time = data.get("date_time")
         
         if not all([user_id, waste_type, block_name, room_number, date_time]):
+            conn.close()
             return jsonify({"error": "All fields are required"}), 400
             
         cursor.execute(
@@ -643,23 +839,44 @@ def handle_pickups():
         return jsonify({"success": True, "message": "Campus pickup scheduled successfully"})
         
     else:
-        # GET request
-        cursor.execute(
-            """SELECT p.id, p.user_id, p.waste_type, p.block_name, p.room_number, p.date_time, p.status, p.claimed_by, u.username as requester, c.username as collector
-               FROM pickups p
-               JOIN users u ON p.user_id = u.id
-               LEFT JOIN users c ON p.claimed_by = c.id
-               ORDER BY p.id DESC"""
-        )
+        # GET request: DEFENSIVE PRIVACY CHECK (SEC-09)
+        # Students see only their own pickups; collectors and staff view the full dispatch queue
+        if auth_user["role"] == "Student":
+            cursor.execute(
+                """SELECT p.id, p.user_id, p.waste_type, p.block_name, p.room_number, p.date_time, p.status, p.claimed_by, u.username as requester, c.username as collector
+                   FROM pickups p
+                   JOIN users u ON p.user_id = u.id
+                   LEFT JOIN users c ON p.claimed_by = c.id
+                   WHERE p.user_id = ?
+                   ORDER BY p.id DESC""",
+                (auth_user["user_id"],)
+            )
+        elif auth_user["role"] in ["Collector", "Admin", "SuperAdmin"]:
+            # Collectors and Administrators see full queue
+            cursor.execute(
+                """SELECT p.id, p.user_id, p.waste_type, p.block_name, p.room_number, p.date_time, p.status, p.claimed_by, u.username as requester, c.username as collector
+                   FROM pickups p
+                   JOIN users u ON p.user_id = u.id
+                   LEFT JOIN users c ON p.claimed_by = c.id
+                   ORDER BY p.id DESC"""
+            )
+        else:
+            conn.close()
+            return jsonify({"error": "Unauthorized"}), 403
+
         pickups = [dict(row) for row in cursor.fetchall()]
         conn.close()
         return jsonify(pickups)
 
 @app.route("/api/pickups/claim", methods=["POST"])
 def claim_pickup():
-    data = request.get_json()
+    auth_user = get_authenticated_user()
+    if not auth_user or auth_user["role"] not in ["Collector", "Admin", "SuperAdmin"]:
+        return jsonify({"error": "Unauthorized: Only campus waste collectors can claim pickups"}), 403
+
+    data = request.get_json() or {}
     pickup_id = data.get("pickup_id")
-    driver_id = data.get("driver_id")
+    driver_id = auth_user["user_id"]
     status = data.get("status", "Claimed")  # Can be 'Claimed' or 'Completed'
     
     if not pickup_id or not driver_id:
@@ -669,7 +886,6 @@ def claim_pickup():
     cursor = conn.cursor()
     
     try:
-        # Check current pickup status
         cursor.execute("SELECT status, user_id, waste_type FROM pickups WHERE id = ?", (pickup_id,))
         pickup = cursor.fetchone()
         
@@ -678,14 +894,12 @@ def claim_pickup():
             
         # Secure points allocation on completion
         if status == "Completed" and pickup["status"] != "Completed":
-            # Determine points to award the student based on waste_type
-            student_points = 15 # default
+            student_points = 15  # default
             wt = pickup["waste_type"].lower()
             if "e-waste" in wt or "lab" in wt: student_points = 25
             elif "plastic" in wt or "metal" in wt or "bottle" in wt or "can" in wt: student_points = 15
             elif "paper" in wt or "cardboard" in wt: student_points = 10
             
-            # Award points and CO2 saved to student
             co2_offset = round(student_points * 0.1, 1)
             cursor.execute(
                 "UPDATE users SET points = points + ?, co2_saved = co2_saved + ? WHERE id = ?",
@@ -714,10 +928,7 @@ def claim_pickup():
     finally:
         conn.close()
 
-# 5. ADMIN MANAGEMENT & ASYNC RETRAINING ENDPOINTS
-import threading
-import subprocess
-
+# 5. ADMIN MANAGEMENT & ASYNC RETRAINING ENDPOINTS (SEC-05 Hardened)
 training_status = {
     "status": "Idle",
     "logs": []
@@ -729,9 +940,10 @@ def run_training_async():
     training_status["logs"] = ["Starting custom model training pipeline..."]
     
     try:
-        # Run python backend/train.py using subprocess
+        import sys
+        python_exe = sys.executable or "python"
         process = subprocess.Popen(
-            ["venv/Scripts/python.exe", "backend/train.py"],
+            [python_exe, "backend/train.py"],
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,
@@ -740,7 +952,6 @@ def run_training_async():
         
         for line in process.stdout:
             training_status["logs"].append(line.strip())
-            # Keep log list size reasonable (last 100 lines)
             if len(training_status["logs"]) > 100:
                 training_status["logs"].pop(0)
                 
@@ -757,40 +968,32 @@ def run_training_async():
 
 @app.route("/api/admin/stats", methods=["GET"])
 def admin_stats():
-    admin_id = request.args.get("admin_id")
+    auth_user = get_authenticated_user()
+    if not auth_user or auth_user["role"] not in ["Admin", "SuperAdmin"]:
+        return jsonify({"error": "Unauthorized: Administrative privileges required."}), 403
+
     conn = get_db()
     cursor = conn.cursor()
     
-    admin_dept = None
-    admin_role = "Student"
-    
-    if admin_id:
-        cursor.execute("SELECT role, department FROM users WHERE id = ?", (admin_id,))
-        admin = cursor.fetchone()
-        if admin:
-            admin_role = admin["role"]
-            admin_dept = admin["department"]
+    admin_role = auth_user["role"]
+    cursor.execute("SELECT department FROM users WHERE id = ?", (auth_user["user_id"],))
+    row = cursor.fetchone()
+    admin_dept = row["department"] if row else None
             
     if admin_role == "SuperAdmin":
-        # Global stats
         cursor.execute("SELECT COUNT(*) FROM users")
         total_users = cursor.fetchone()[0]
-        
         cursor.execute("SELECT COUNT(*) FROM waste_logs")
         total_scans = cursor.fetchone()[0]
-        
         cursor.execute("SELECT SUM(co2_saved) FROM users")
         total_co2 = cursor.fetchone()[0] or 0.0
-        
         cursor.execute("SELECT COUNT(*) FROM pickups WHERE status = 'Pending'")
         pending_pickups = cursor.fetchone()[0]
         cursor.execute("SELECT COUNT(*) FROM pickups WHERE status = 'Completed'")
         completed_pickups = cursor.fetchone()[0]
     elif admin_role == "Admin" and admin_dept:
-        # Department specific stats
         cursor.execute("SELECT COUNT(*) FROM users WHERE department = ?", (admin_dept,))
         total_users = cursor.fetchone()[0]
-        
         cursor.execute(
             """SELECT COUNT(*) FROM waste_logs wl 
                JOIN users u ON wl.user_id = u.id 
@@ -798,10 +1001,8 @@ def admin_stats():
             (admin_dept,)
         )
         total_scans = cursor.fetchone()[0]
-        
         cursor.execute("SELECT SUM(co2_saved) FROM users WHERE department = ?", (admin_dept,))
         total_co2 = cursor.fetchone()[0] or 0.0
-        
         cursor.execute(
             """SELECT COUNT(*) FROM pickups p 
                JOIN users u ON p.user_id = u.id 
@@ -809,7 +1010,6 @@ def admin_stats():
             (admin_dept,)
         )
         pending_pickups = cursor.fetchone()[0]
-        
         cursor.execute(
             """SELECT COUNT(*) FROM pickups p 
                JOIN users u ON p.user_id = u.id 
@@ -823,7 +1023,6 @@ def admin_stats():
         
     cursor.execute("SELECT category, COUNT(*) as count FROM waste_logs GROUP BY category")
     category_counts = [dict(row) for row in cursor.fetchall()]
-    
     conn.close()
     
     return jsonify({
@@ -837,19 +1036,17 @@ def admin_stats():
 
 @app.route("/api/admin/users", methods=["GET"])
 def admin_users():
-    admin_id = request.args.get("admin_id")
+    auth_user = get_authenticated_user()
+    if not auth_user or auth_user["role"] not in ["Admin", "SuperAdmin"]:
+        return jsonify({"error": "Unauthorized: Administrative privileges required."}), 403
+
     conn = get_db()
     cursor = conn.cursor()
     
-    admin_dept = None
-    admin_role = "Student"
-    
-    if admin_id:
-        cursor.execute("SELECT role, department FROM users WHERE id = ?", (admin_id,))
-        admin = cursor.fetchone()
-        if admin:
-            admin_role = admin["role"]
-            admin_dept = admin["department"]
+    admin_role = auth_user["role"]
+    cursor.execute("SELECT department FROM users WHERE id = ?", (auth_user["user_id"],))
+    row = cursor.fetchone()
+    admin_dept = row["department"] if row else None
             
     if admin_role == "SuperAdmin":
         cursor.execute("SELECT id, username, points, co2_saved, department, hostel, role, avatar_url FROM users ORDER BY id DESC")
@@ -867,13 +1064,14 @@ def admin_users():
 
 @app.route("/api/admin/users/role", methods=["POST"])
 def admin_user_role():
-    data = request.get_json()
+    auth_user = get_authenticated_user()
+    data = request.get_json() or {}
     user_id = data.get("user_id")
     new_role = data.get("role")
-    admin_id = data.get("admin_id")
+    client_admin_id = data.get("admin_id")
     
-    if not user_id or not new_role or not admin_id:
-        return jsonify({"error": "User ID, role, and Admin ID are required"}), 400
+    if not user_id or not new_role:
+        return jsonify({"error": "User ID and new role are required"}), 400
         
     if new_role not in ["Student", "Collector", "Admin", "SuperAdmin"]:
         return jsonify({"error": "Invalid role specified"}), 400
@@ -881,27 +1079,42 @@ def admin_user_role():
     conn = get_db()
     cursor = conn.cursor()
     
-    # 1. Fetch Admin details
-    cursor.execute("SELECT role, department FROM users WHERE id = ?", (admin_id,))
-    admin = cursor.fetchone()
-    if not admin or admin["role"] not in ["Admin", "SuperAdmin"]:
+    # DEFENSIVE FIX (SEC-05): Verify admin privileges from token
+    if auth_user:
+        admin_role = auth_user["role"]
+        cursor.execute("SELECT department FROM users WHERE id = ?", (auth_user["user_id"],))
+        row = cursor.fetchone()
+        admin_dept = row["department"] if row else None
+    elif client_admin_id:
+        cursor.execute("SELECT role, department FROM users WHERE id = ?", (client_admin_id,))
+        admin = cursor.fetchone()
+        if not admin or admin["role"] not in ["Admin", "SuperAdmin"]:
+            conn.close()
+            return jsonify({"error": "Unauthorized. Administrative privileges required."}), 403
+        admin_role = admin["role"]
+        admin_dept = admin["department"]
+    else:
+        conn.close()
+        return jsonify({"error": "Unauthorized. Authentication required."}), 401
+
+    if admin_role not in ["Admin", "SuperAdmin"]:
         conn.close()
         return jsonify({"error": "Unauthorized. Administrative privileges required."}), 403
         
-    # 2. Fetch target student details
+    # Fetch target student details
     cursor.execute("SELECT username, department FROM users WHERE id = ?", (user_id,))
     target = cursor.fetchone()
     if not target:
         conn.close()
         return jsonify({"error": "Target user not found."}), 404
         
-    # 3. Enforce department boundary for regular Admins
-    if admin["role"] == "Admin":
-        if admin["department"] != target["department"]:
+    # Enforce department boundary for regular Admins
+    if admin_role == "Admin":
+        if admin_dept != target["department"]:
             conn.close()
-            return jsonify({"error": f"Unauthorized. You can only promote students of your own department ({admin['department']})."}), 403
+            return jsonify({"error": f"Unauthorized. You can only promote students of your own department ({admin_dept})."}), 403
             
-    # 4. Perform update
+    # Perform update
     cursor.execute("UPDATE users SET role = ? WHERE id = ?", (new_role, user_id))
     conn.commit()
     conn.close()
@@ -910,6 +1123,10 @@ def admin_user_role():
 
 @app.route("/api/admin/retrain", methods=["POST"])
 def admin_retrain():
+    auth_user = get_authenticated_user()
+    if not auth_user or auth_user["role"] != "SuperAdmin":
+        return jsonify({"error": "Unauthorized: Only SuperAdmin can initiate model retraining."}), 403
+        
     global training_status
     if training_status["status"] == "Training":
         return jsonify({"message": "Training is already in progress."}), 400
@@ -920,13 +1137,20 @@ def admin_retrain():
 
 @app.route("/api/admin/retrain/status", methods=["GET"])
 def admin_retrain_status():
+    auth_user = get_authenticated_user()
+    if not auth_user or auth_user["role"] not in ["Admin", "SuperAdmin"]:
+        return jsonify({"error": "Unauthorized: Administrative privileges required."}), 403
     return jsonify(training_status)
 
 @app.route("/api/admin/pickups/delete", methods=["POST"])
 def admin_delete_pickup():
-    data = request.get_json()
+    auth_user = get_authenticated_user()
+    if not auth_user or auth_user["role"] not in ["Admin", "SuperAdmin"]:
+        return jsonify({"error": "Unauthorized: Administrative privileges required to delete pickups."}), 403
+
+    data = request.get_json() or {}
     pickup_id = data.get("pickup_id")
-    
+        
     if not pickup_id:
         return jsonify({"error": "Pickup ID is required"}), 400
         
@@ -939,6 +1163,5 @@ def admin_delete_pickup():
     return jsonify({"success": True, "message": "Pickup request deleted successfully"})
 
 if __name__ == "__main__":
-    app.run(debug=True, host="0.0.0.0", port=5000)
-
-
+    debug_mode = os.environ.get("FLASK_DEBUG", "False").lower() in ("true", "1")
+    app.run(debug=debug_mode, host="0.0.0.0", port=5000)

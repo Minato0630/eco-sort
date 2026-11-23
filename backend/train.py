@@ -36,9 +36,9 @@ def train_model():
 
     print(f"Found {total_images} images across classes. Starting transfer learning...")
 
-    # Data Augmentation & Generators
+    # Data Augmentation & Generators (Consistent with MobileNetV2 Preprocessing)
     train_datagen = ImageDataGenerator(
-        rescale=1./255,
+        preprocessing_function=tf.keras.applications.mobilenet_v2.preprocess_input,
         rotation_range=20,
         width_shift_range=0.2,
         height_shift_range=0.2,
@@ -49,6 +49,12 @@ def train_model():
         validation_split=0.2  # 20% validation split
     )
 
+    # Separate unaugmented validation generator to avoid stochastic distortion
+    val_datagen = ImageDataGenerator(
+        preprocessing_function=tf.keras.applications.mobilenet_v2.preprocess_input,
+        validation_split=0.2
+    )
+
     train_generator = train_datagen.flow_from_directory(
         DATASET_DIR,
         target_size=IMAGE_SIZE,
@@ -57,7 +63,7 @@ def train_model():
         subset='training'
     )
 
-    validation_generator = train_datagen.flow_from_directory(
+    validation_generator = val_datagen.flow_from_directory(
         DATASET_DIR,
         target_size=IMAGE_SIZE,
         batch_size=BATCH_SIZE,

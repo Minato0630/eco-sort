@@ -2239,6 +2239,9 @@
                 .then(data => {
                     currentUser = data.user;
                     localStorage.setItem('eco_user', JSON.stringify(currentUser));
+                    if (data.token) {
+                        localStorage.setItem('eco_token', data.token);
+                    }
                     enterApp();
                 })
                 .catch(err => {
@@ -2246,8 +2249,17 @@
                 });
         }
 
+        function getAuthHeaders(includeJson = true) {
+            const token = localStorage.getItem('eco_token');
+            const headers = {};
+            if (includeJson) headers["Content-Type"] = "application/json";
+            if (token) headers["Authorization"] = "Bearer " + token;
+            return headers;
+        }
+
         function logout() {
             localStorage.removeItem('eco_user');
+            localStorage.removeItem('eco_token');
             currentUser = null;
             document.getElementById('appView').style.display = 'none';
             document.getElementById('authView').style.display = 'flex';
@@ -2351,7 +2363,9 @@
                 });
 
             // Get user specific logs to compute total scanned items
-            fetch(`${API_URL}/api/logs?user_id=${currentUser.id}`)
+            fetch(`${API_URL}/api/logs?user_id=${currentUser.id}`, {
+                headers: getAuthHeaders(false)
+            })
                 .then(res => res.json())
                 .then(logs => {
                     document.getElementById('statSorted').innerText = logs.length;
@@ -2626,6 +2640,7 @@
             // Fetch ML classification
             fetch(API_URL + "/predict", {
                 method: "POST",
+                headers: getAuthHeaders(false),
                 body: data
             })
                 .then(res => res.json())
@@ -2708,6 +2723,7 @@
                 // Fetch prediction from backend API
                 fetch(API_URL + "/predict", {
                     method: "POST",
+                    headers: getAuthHeaders(false),
                     body: data
                 })
                     .then(res => res.json())
@@ -2768,7 +2784,9 @@
         }
 
         function loadPickups() {
-            fetch(API_URL + "/api/pickups")
+            fetch(API_URL + "/api/pickups", {
+                headers: getAuthHeaders(false)
+            })
                 .then(res => res.json())
                 .then(pickups => {
                     // Render personal pickups in form container list
@@ -2881,9 +2899,8 @@
 
             fetch(API_URL + "/api/pickups", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: getAuthHeaders(true),
                 body: JSON.stringify({
-                    user_id: currentUser.id,
                     waste_type,
                     block_name,
                     room_number,
@@ -2903,10 +2920,9 @@
         function updatePickupStatus(pickup_id, status) {
             fetch(API_URL + "/api/pickups/claim", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: getAuthHeaders(true),
                 body: JSON.stringify({
                     pickup_id,
-                    driver_id: currentUser.id,
                     status
                 })
             })

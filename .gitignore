@@ -1,8 +1,15 @@
 venv/
 __pycache__/
 backend/__pycache__/
+api/__pycache__/
 *.pyc
 uploads/
+frontend/uploads/avatars/
 /tmp/
 .vscode/
 waste_sorting_codebase.zip
+waste_sorting.db
+*.db
+admin.txt
+.env
+.env.*

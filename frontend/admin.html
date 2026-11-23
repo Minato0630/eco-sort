@@ -305,13 +305,24 @@
             }
         });
 
+        function getAuthHeaders(includeJson = true) {
+            const token = localStorage.getItem('eco_token');
+            const headers = {};
+            if (includeJson) headers["Content-Type"] = "application/json";
+            if (token) headers["Authorization"] = "Bearer " + token;
+            return headers;
+        }
+
         function logout() {
             localStorage.removeItem('eco_user');
+            localStorage.removeItem('eco_token');
             window.location.href = "index.html";
         }
 
         function loadStats() {
-            fetch(API_URL + `/api/admin/stats?admin_id=${currentUser.id}`)
+            fetch(API_URL + `/api/admin/stats?admin_id=${currentUser.id}`, {
+                headers: getAuthHeaders()
+            })
                 .then(res => res.json())
                 .then(stats => {
                     document.getElementById('adminTotalUsers').innerText = stats.total_users;
@@ -323,7 +334,9 @@
         }
 
         function loadUsers() {
-            fetch(API_URL + `/api/admin/users?admin_id=${currentUser.id}`)
+            fetch(API_URL + `/api/admin/users?admin_id=${currentUser.id}`, {
+                headers: getAuthHeaders()
+            })
                 .then(res => res.json())
                 .then(users => {
                     allUsers = users;
@@ -375,7 +388,7 @@
             
             fetch(API_URL + "/api/admin/users/role", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: getAuthHeaders(),
                 body: JSON.stringify({ user_id: user_id, role: newRole, admin_id: currentUser.id })
             })
             .then(res => res.json())
@@ -392,7 +405,9 @@
         }
 
         function loadPickups() {
-            fetch(API_URL + "/api/pickups")
+            fetch(API_URL + "/api/pickups", {
+                headers: getAuthHeaders(false)
+            })
                 .then(res => res.json())
                 .then(pickups => {
                     const tbody = document.getElementById('pickupsRows');
@@ -429,8 +444,8 @@
             
             fetch(API_URL + "/api/admin/pickups/delete", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ pickup_id: pickup_id })
+                headers: getAuthHeaders(),
+                body: JSON.stringify({ pickup_id: pickup_id, admin_id: currentUser.id })
             })
             .then(res => res.json())
             .then(data => {
@@ -446,7 +461,11 @@
             btn.disabled = true;
             btn.innerText = "Training...";
             
-            fetch(API_URL + "/api/admin/retrain", { method: "POST" })
+            fetch(API_URL + "/api/admin/retrain", { 
+                method: "POST",
+                headers: getAuthHeaders(),
+                body: JSON.stringify({ admin_id: currentUser.id })
+            })
                 .then(res => res.json())
                 .then(data => {
                     if (data.success) {
@@ -468,7 +487,9 @@
         }
 
         function checkRetrainStatus() {
-            fetch(API_URL + "/api/admin/retrain/status")
+            fetch(API_URL + "/api/admin/retrain/status", {
+                headers: getAuthHeaders(false)
+            })
                 .then(res => res.json())
                 .then(state => {
                     const statusBadge = document.getElementById('retrainStatus');

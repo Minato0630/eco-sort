@@ -305,35 +305,19 @@ def predict_waste(image_path):
             except Exception as e:
                 print("Error predicting using ImageNet model:", e)
 
-    # 4. Fallback to pattern-based mock classification if no ML is available
-    filename = os.path.basename(image_path).lower()
-    if "bottle" in filename or "plastic" in filename or "straw" in filename:
-        raw_label = "plastic_bottle"
-    elif "paper" in filename or "newspaper" in filename or "cardboard" in filename:
-        raw_label = "newspaper"
-    elif "banana" in filename or "apple" in filename or "orange" in filename or "peel" in filename or "scrap" in filename or "food" in filename:
-        raw_label = "banana_peel"
-    elif "phone" in filename or "remote" in filename or "battery" in filename or "circuit" in filename:
-        raw_label = "mobile_phone"
-    elif "can" in filename or "tin" in filename or "metal" in filename:
-        raw_label = "soda_can"
-    else:
-        mock_labels = ["plastic_bottle", "newspaper", "banana_peel", "mobile_phone", "soda_can", "ceramic_plate"]
-        idx = hash(image_path) % len(mock_labels)
-        raw_label = mock_labels[idx]
-        
-    mapping = map_label_to_category(raw_label)
-    confidence = 85.0 + (hash(image_path) % 150) / 10.0
-    
+    # 4. Fallback if no valid machine learning model could be loaded or executed
+    print("Warning: No valid ML model (LiteRT, Keras, or ImageNet) is available for inference.")
     return {
-        "raw_label": raw_label,
-        "detected_item": raw_label.replace("_", " ").title(),
-        "waste_type": mapping["category"],
-        "bin": mapping["bin"],
-        "bin_color": mapping["color"],
-        "points": mapping["points"],
-        "co2_offset": mapping["co2_offset"],
-        "confidence": round(confidence, 2)
+        "error": "ML Inference Service Unavailable: No trained model could be loaded or executed.",
+        "status": 503,
+        "raw_label": "Unknown",
+        "detected_item": "Unrecognized Waste Item",
+        "waste_type": "Uncertain / Unsupported Item",
+        "bin": "Manual Inspection / Verification Needed",
+        "bin_color": "gray",
+        "points": 0,
+        "co2_offset": 0.0,
+        "confidence": 0.0
     }
 
 
