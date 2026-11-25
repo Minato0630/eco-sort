@@ -705,8 +705,9 @@ def predict():
     path = os.path.join(UPLOAD_FOLDER, safe_name)
     file.save(path)
 
-    # Run AI prediction
-    result = predict_waste(path)
+    # Run AI prediction with optional Grad-CAM explainability
+    include_gradcam = request.form.get("gradcam", "true").lower() in ["true", "1", "yes"]
+    result = predict_waste(path, include_gradcam=include_gradcam)
     
     # If error returned from inference
     if result.get("status") == 503:

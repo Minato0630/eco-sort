@@ -13,3 +13,6 @@ waste_sorting.db
 admin.txt
 .env
 .env.*
+scratch/
+dataset_curated/
+backend/waste_classifier_v1.*

@@ -1,0 +1,260 @@
+{
+    "model_name": "EcoSort_MobileNetV2_v2",
+    "architecture": "MobileNetV2 + Transfer Learning + Fine-Tuning",
+    "test_set_size": 141,
+    "classes": [
+        "E-Waste",
+        "General",
+        "Metal",
+        "Organic",
+        "Paper",
+        "Plastic"
+    ],
+    "metrics_v2": {
+        "accuracy": 0.8794326241134752,
+        "macro_precision": 0.8849795128306975,
+        "macro_recall": 0.8775252525252526,
+        "macro_f1": 0.8775784134372615,
+        "weighted_precision": 0.8855184572992865,
+        "weighted_recall": 0.8794326241134752,
+        "weighted_f1": 0.8787792688001369,
+        "confusion_matrix": [
+            [
+                23,
+                0,
+                0,
+                0,
+                0,
+                0
+            ],
+            [
+                0,
+                15,
+                2,
+                0,
+                1,
+                4
+            ],
+            [
+                0,
+                1,
+                23,
+                0,
+                0,
+                0
+            ],
+            [
+                0,
+                0,
+                0,
+                24,
+                0,
+                0
+            ],
+            [
+                0,
+                3,
+                1,
+                0,
+                20,
+                0
+            ],
+            [
+                0,
+                0,
+                5,
+                0,
+                0,
+                19
+            ]
+        ],
+        "per_class": {
+            "E-Waste": {
+                "precision": 1.0,
+                "recall": 1.0,
+                "f1_score": 1.0,
+                "support": 23
+            },
+            "General": {
+                "precision": 0.7894736842105263,
+                "recall": 0.6818181818181818,
+                "f1_score": 0.7317073170731707,
+                "support": 22
+            },
+            "Metal": {
+                "precision": 0.7419354838709677,
+                "recall": 0.9583333333333334,
+                "f1_score": 0.8363636363636364,
+                "support": 24
+            },
+            "Organic": {
+                "precision": 1.0,
+                "recall": 1.0,
+                "f1_score": 1.0,
+                "support": 24
+            },
+            "Paper": {
+                "precision": 0.9523809523809523,
+                "recall": 0.8333333333333334,
+                "f1_score": 0.888888888888889,
+                "support": 24
+            },
+            "Plastic": {
+                "precision": 0.8260869565217391,
+                "recall": 0.7916666666666666,
+                "f1_score": 0.8085106382978724,
+                "support": 24
+            }
+        }
+    },
+    "metrics_v1": {
+        "accuracy": 0.36879432624113473,
+        "macro_precision": 0.31962170383223015,
+        "macro_recall": 0.3685770750988142,
+        "macro_f1": 0.3220237534803018,
+        "weighted_precision": 0.31963391840211547,
+        "weighted_recall": 0.36879432624113473,
+        "weighted_f1": 0.3219841176037952,
+        "confusion_matrix": [
+            [
+                8,
+                5,
+                1,
+                4,
+                0,
+                5
+            ],
+            [
+                2,
+                8,
+                3,
+                7,
+                0,
+                2
+            ],
+            [
+                0,
+                6,
+                10,
+                2,
+                0,
+                6
+            ],
+            [
+                0,
+                0,
+                0,
+                22,
+                0,
+                2
+            ],
+            [
+                3,
+                5,
+                0,
+                16,
+                0,
+                0
+            ],
+            [
+                3,
+                11,
+                4,
+                1,
+                1,
+                4
+            ]
+        ],
+        "per_class": {
+            "E-Waste": {
+                "precision": 0.5,
+                "recall": 0.34782608695652173,
+                "f1_score": 0.41025641025641024,
+                "support": 23
+            },
+            "General": {
+                "precision": 0.22857142857142856,
+                "recall": 0.36363636363636365,
+                "f1_score": 0.2807017543859649,
+                "support": 22
+            },
+            "Metal": {
+                "precision": 0.5555555555555556,
+                "recall": 0.4166666666666667,
+                "f1_score": 0.4761904761904762,
+                "support": 24
+            },
+            "Organic": {
+                "precision": 0.4230769230769231,
+                "recall": 0.9166666666666666,
+                "f1_score": 0.5789473684210527,
+                "support": 24
+            },
+            "Paper": {
+                "precision": 0.0,
+                "recall": 0.0,
+                "f1_score": 0.0,
+                "support": 24
+            },
+            "Plastic": {
+                "precision": 0.21052631578947367,
+                "recall": 0.16666666666666666,
+                "f1_score": 0.186046511627907,
+                "support": 24
+            }
+        }
+    },
+    "threshold_calibration": {
+        "analysis": [
+            {
+                "threshold": 0.5,
+                "coverage": 0.948905109489051,
+                "accuracy_above_threshold": 0.8923076923076924,
+                "error_rate": 0.10769230769230764
+            },
+            {
+                "threshold": 0.6,
+                "coverage": 0.9051094890510949,
+                "accuracy_above_threshold": 0.8951612903225806,
+                "error_rate": 0.10483870967741937
+            },
+            {
+                "threshold": 0.65,
+                "coverage": 0.8905109489051095,
+                "accuracy_above_threshold": 0.9016393442622951,
+                "error_rate": 0.09836065573770492
+            },
+            {
+                "threshold": 0.7,
+                "coverage": 0.8540145985401459,
+                "accuracy_above_threshold": 0.9145299145299145,
+                "error_rate": 0.0854700854700855
+            },
+            {
+                "threshold": 0.75,
+                "coverage": 0.7883211678832117,
+                "accuracy_above_threshold": 0.9444444444444444,
+                "error_rate": 0.05555555555555558
+            },
+            {
+                "threshold": 0.8,
+                "coverage": 0.7153284671532847,
+                "accuracy_above_threshold": 0.9693877551020408,
+                "error_rate": 0.030612244897959218
+            },
+            {
+                "threshold": 0.85,
+                "coverage": 0.6934306569343066,
+                "accuracy_above_threshold": 0.968421052631579,
+                "error_rate": 0.03157894736842104
+            },
+            {
+                "threshold": 0.9,
+                "coverage": 0.5766423357664233,
+                "accuracy_above_threshold": 0.9746835443037974,
+                "error_rate": 0.025316455696202556
+            }
+        ],
+        "recommended_threshold": 0.65
+    }
+}

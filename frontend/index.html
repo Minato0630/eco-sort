@@ -462,15 +462,18 @@
                         </div>
 
                         <div class="result-details" id="resDetails">
-                            <div class="detected-item-header" id="resItemName">Water Bottle</div>
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                                <div class="detected-item-header" id="resItemName" style="margin-bottom: 0;">Water Bottle</div>
+                                <span id="resModelVersion" style="font-size: 0.72rem; padding: 2px 8px; border-radius: var(--radius-full); background: var(--bg-hover); color: var(--text-muted); font-weight: 600; border: 1px solid var(--border-color);">v2.0.0</span>
+                            </div>
                             <span class="confidence-pill" id="resConfidence">Confidence: 94.5%</span>
 
                             <!-- Low-Confidence Uncertainty State Banner -->
                             <div class="uncertainty-box" id="resUncertaintyBox" style="display: none;">
                                 <i class="fa-solid fa-triangle-exclamation" style="font-size: 1.1rem; flex-shrink: 0;"></i>
                                 <div>
-                                    <strong>Low Confidence Prediction (&lt; 50%)</strong><br>
-                                    The AI model cannot classify this item with high certainty. Please review the recommended bin instructions below or rescan with clearer lighting.
+                                    <strong>Uncertain Prediction (< 65%)</strong><br>
+                                    <span id="resUncertaintyMsg">The AI model cannot classify this item with high certainty. Please review the recommended bin instructions below or rescan with clearer lighting.</span>
                                 </div>
                             </div>
 
@@ -488,11 +491,27 @@
                             </div>
 
                             <h4 style="font-size: 0.95rem; margin-bottom: 8px;">Disposal Advisory</h4>
-                            <p style="color: var(--text-muted); font-size: 0.85rem; line-height: 1.4; margin-bottom: 20px;"
+                            <p style="color: var(--text-muted); font-size: 0.85rem; line-height: 1.4; margin-bottom: 16px;"
                                 id="resAdvisory">
                                 Rinse thoroughly to remove residues. Empty caps and labels can remain attached. Crush to
                                 save bin space.
                             </p>
+
+                            <!-- Grad-CAM Visual Explainability Card -->
+                            <div id="resGradCamBox" style="display: none; margin-bottom: 18px; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 12px; background: var(--bg-hover);">
+                                <div style="display: flex; justify-content: space-between; align-items: center; cursor: pointer;" onclick="toggleGradCam()">
+                                    <span style="font-size: 0.84rem; font-weight: 700; color: var(--color-primary-dark);">
+                                        <i class="fa-solid fa-wand-magic-sparkles" style="color: var(--color-primary); margin-right: 6px;"></i>Grad-CAM Visual Explanation
+                                    </span>
+                                    <i class="fa-solid fa-chevron-down" id="gradCamChevron" style="font-size: 0.8rem; color: var(--text-muted); transition: transform 0.2s;"></i>
+                                </div>
+                                <div id="gradCamContent" style="display: none; margin-top: 10px;">
+                                    <img id="resGradCamImg" src="" alt="Grad-CAM Saliency Map" style="width: 100%; border-radius: var(--radius-sm); border: 1px solid var(--border-color); margin-bottom: 8px;">
+                                    <p style="font-size: 0.76rem; color: var(--text-muted); line-height: 1.35; margin: 0;" id="resGradCamExpl">
+                                        Grad-CAM highlights the image regions that contributed most to the model's classification. This is an approximate saliency map to assist human inspection, not absolute proof.
+                                    </p>
+                                </div>
+                            </div>
 
                             <div class="reward-grid">
                                 <div class="reward-pill">
@@ -1436,77 +1455,118 @@
             })
                 .then(res => res.json())
                 .then(result => {
-                    // Remove laser line
-                    laser.style.display = 'none';
-
-                    // Display Results Details
-                    document.getElementById('resPlaceholder').style.display = 'none';
-                    document.getElementById('resDetails').style.display = 'block';
-
-                    document.getElementById('resItemName').innerText = result.detected_item;
-                    const confEl = document.getElementById('resConfidence');
-                    confEl.innerText = `Confidence: ${result.confidence}%`;
-
-                    // Handle Low Confidence State (< 50%)
-                    const uncBox = document.getElementById('resUncertaintyBox');
-                    if (result.confidence < 50.0) {
-                        uncBox.style.display = 'flex';
-                        confEl.classList.add('low-confidence');
-                    } else {
-                        uncBox.style.display = 'none';
-                        confEl.classList.remove('low-confidence');
-                    }
-
-                    // Render Top-3 Predictions Distribution if available
-                    const topBox = document.getElementById('resTopPredictionsBox');
-                    const topList = document.getElementById('resTopPredictionsList');
-                    if (result.top_predictions && result.top_predictions.length > 0) {
-                        topBox.style.display = 'block';
-                        topList.innerHTML = '';
-                        result.top_predictions.forEach(p => {
-                            const item = document.createElement('div');
-                            item.innerHTML = `
-                                <div class="top-pred-item">
-                                    <span class="pred-name">${p.category}</span>
-                                    <span>${p.confidence}%</span>
-                                </div>
-                                <div class="top-pred-bar">
-                                    <div class="top-pred-fill" style="width: ${Math.min(p.confidence, 100)}%;"></div>
-                                </div>
-                            `;
-                            topList.appendChild(item);
-                        });
-                    } else {
-                        topBox.style.display = 'none';
-                    }
-
-                    showToast(`Scanned: ${result.detected_item} (+${result.points} pts)`, 'success');
-
-                    const binBox = document.getElementById('resBinBox');
-                    binBox.className = `bin-alert-box ${result.bin_color}`;
-                    document.getElementById('resBinText').innerText = result.bin;
-
-                    // Set custom advisory tips based on category
-                    let advisory = "Dispose responsibly.";
-                    if (result.bin_color === 'blue') advisory = "Rinse containers to remove food residues. Empty plastic caps can remain attached. Flatten boxes to save space.";
-                    else if (result.bin_color === 'green') advisory = "Ideal for organic waste. Keep plastic packaging out. Can be composted directly to nourish soil.";
-                    else if (result.bin_color === 'red') advisory = "Wash tin and metal cans. Aluminum foils and beverage cans are fully recyclable.";
-                    else if (result.bin_color === 'orange') advisory = "Warning: Electronic components require professional disposal. Schedule a bulk pickup above to hand it to specialists.";
-
-                    document.getElementById('resAdvisory').innerText = advisory;
-                    document.getElementById('resPoints').innerText = `+${result.points}`;
-                    document.getElementById('resCO2').innerText = `${result.co2_offset} kg`;
-
-                    // Update current user cached metrics
-                    currentUser.points = result.user_points;
-                    currentUser.co2_saved = result.user_co2_saved;
-                    localStorage.setItem('eco_user', JSON.stringify(currentUser));
+                    renderScanResult(result);
                 })
                 .catch(err => {
                     laser.style.display = 'none';
                     alert("Upload failed. Verify python Flask server is running on localhost:5000");
                     console.error(err);
                 });
+        }
+
+        function toggleGradCam() {
+            const content = document.getElementById('gradCamContent');
+            const chevron = document.getElementById('gradCamChevron');
+            if (!content) return;
+            if (content.style.display === 'none' || content.style.display === '') {
+                content.style.display = 'block';
+                if (chevron) chevron.style.transform = 'rotate(180deg)';
+            } else {
+                content.style.display = 'none';
+                if (chevron) chevron.style.transform = 'rotate(0deg)';
+            }
+        }
+
+        function renderScanResult(result) {
+            const laser = document.getElementById('laserLine');
+            if (laser) laser.style.display = 'none';
+
+            // Display Results Details
+            document.getElementById('resPlaceholder').style.display = 'none';
+            document.getElementById('resDetails').style.display = 'block';
+
+            document.getElementById('resItemName').innerText = result.detected_item || result.raw_label || "Waste Item";
+            
+            // Model version indicator
+            const versionEl = document.getElementById('resModelVersion');
+            if (versionEl && result.model_version) {
+                versionEl.innerText = result.model_version;
+            }
+
+            const confEl = document.getElementById('resConfidence');
+            confEl.innerText = `Confidence: ${result.confidence}%`;
+
+            // Validation-Calibrated Uncertainty Handling (< 65% or is_uncertain)
+            const uncBox = document.getElementById('resUncertaintyBox');
+            const uncMsg = document.getElementById('resUncertaintyMsg');
+            if (result.is_uncertain || result.status === 'uncertain' || result.confidence < 65.0) {
+                uncBox.style.display = 'flex';
+                confEl.classList.add('low-confidence');
+                if (uncMsg && result.uncertainty_message) {
+                    uncMsg.innerText = result.uncertainty_message;
+                }
+            } else {
+                uncBox.style.display = 'none';
+                confEl.classList.remove('low-confidence');
+            }
+
+            // Render Top-3 Predictions Distribution
+            const topBox = document.getElementById('resTopPredictionsBox');
+            const topList = document.getElementById('resTopPredictionsList');
+            if (result.top_predictions && result.top_predictions.length > 0) {
+                topBox.style.display = 'block';
+                topList.innerHTML = '';
+                result.top_predictions.forEach(p => {
+                    const item = document.createElement('div');
+                    item.innerHTML = `
+                        <div class="top-pred-item">
+                            <span class="pred-name">${p.category}</span>
+                            <span>${p.confidence}%</span>
+                        </div>
+                        <div class="top-pred-bar">
+                            <div class="top-pred-fill" style="width: ${Math.min(p.confidence, 100)}%;"></div>
+                        </div>
+                    `;
+                    topList.appendChild(item);
+                });
+            } else {
+                topBox.style.display = 'none';
+            }
+
+            showToast(`Scanned: ${result.detected_item} (+${result.points} pts)`, 'success');
+
+            const binBox = document.getElementById('resBinBox');
+            binBox.className = `bin-alert-box ${result.bin_color || 'blue'}`;
+            document.getElementById('resBinText').innerText = result.bin;
+
+            // Use backend specific disposal guidance if available
+            document.getElementById('resAdvisory').innerText = result.disposal_guidance || "Rinse containers to remove food residues. Flatten boxes to save space.";
+            document.getElementById('resPoints').innerText = `+${result.points}`;
+            document.getElementById('resCO2').innerText = `${result.co2_offset} kg`;
+
+            // Grad-CAM Visual Heatmap
+            const gradCamBox = document.getElementById('resGradCamBox');
+            const gradCamImg = document.getElementById('resGradCamImg');
+            const gradCamExpl = document.getElementById('resGradCamExpl');
+            if (gradCamBox && gradCamImg) {
+                if (result.gradcam_image) {
+                    gradCamBox.style.display = 'block';
+                    gradCamImg.src = result.gradcam_image;
+                    if (gradCamExpl && result.gradcam_explanation) {
+                        gradCamExpl.innerText = result.gradcam_explanation;
+                    }
+                } else {
+                    gradCamBox.style.display = 'none';
+                }
+            }
+
+            // Update cached user metrics
+            if (result.user_points !== undefined && typeof currentUser !== 'undefined' && currentUser) {
+                currentUser.points = result.user_points;
+                currentUser.co2_saved = result.user_co2_saved;
+                localStorage.setItem('eco_user', JSON.stringify(currentUser));
+                if (typeof updateUserUI === 'function') updateUserUI();
+            }
         }
 
         function captureAndScan() {
@@ -1555,31 +1615,7 @@
                 })
                     .then(res => res.json())
                     .then(result => {
-                        laser.style.display = 'none';
-
-                        document.getElementById('resPlaceholder').style.display = 'none';
-                        document.getElementById('resDetails').style.display = 'block';
-
-                        document.getElementById('resItemName').innerText = result.detected_item;
-                        document.getElementById('resConfidence').innerText = `Confidence: ${result.confidence}%`;
-
-                        const binBox = document.getElementById('resBinBox');
-                        binBox.className = `bin-alert-box ${result.bin_color}`;
-                        document.getElementById('resBinText').innerText = result.bin;
-
-                        let advisory = "Dispose responsibly.";
-                        if (result.bin_color === 'blue') advisory = "Rinse containers to remove food residues. Empty plastic caps can remain attached. Flatten boxes to save space.";
-                        else if (result.bin_color === 'green') advisory = "Ideal for organic waste. Keep plastic packaging out. Can be composted directly to nourish soil.";
-                        else if (result.bin_color === 'red') advisory = "Wash tin and metal cans. Aluminum foils and beverage cans are fully recyclable.";
-                        else if (result.bin_color === 'orange') advisory = "Warning: Electronic components require professional disposal. Schedule a bulk pickup above to hand it to specialists.";
-
-                        document.getElementById('resAdvisory').innerText = advisory;
-                        document.getElementById('resPoints').innerText = `+${result.points}`;
-                        document.getElementById('resCO2').innerText = `${result.co2_offset} kg`;
-
-                        currentUser.points = result.user_points;
-                        currentUser.co2_saved = result.user_co2_saved;
-                        localStorage.setItem('eco_user', JSON.stringify(currentUser));
+                        renderScanResult(result);
                     })
                     .catch(err => {
                         laser.style.display = 'none';
@@ -2235,6 +2271,12 @@
             const dropzone = document.getElementById('dropzone');
             dropzone.style.cursor = 'pointer';
             dropzone.setAttribute('onclick', 'triggerFileSelect()');
+            const gradCamBox = document.getElementById('resGradCamBox');
+            if (gradCamBox) gradCamBox.style.display = 'none';
+            const gradCamContent = document.getElementById('gradCamContent');
+            if (gradCamContent) gradCamContent.style.display = 'none';
+            const gradCamChevron = document.getElementById('gradCamChevron');
+            if (gradCamChevron) gradCamChevron.style.transform = 'rotate(0deg)';
         }
 
 </script>

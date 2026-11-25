@@ -1,0 +1,82 @@
+{
+    "stats": {
+        "E-Waste": {
+            "total": 146,
+            "train": 102,
+            "val": 21,
+            "test": 23,
+            "sources": {
+                "EWasteNet_IEEE2023": 144,
+                "original_dataset": 2
+            }
+        },
+        "General": {
+            "total": 138,
+            "train": 96,
+            "val": 20,
+            "test": 22,
+            "sources": {
+                "TrashNet_Stanford": 137,
+                "original_dataset": 1
+            }
+        },
+        "Metal": {
+            "total": 160,
+            "train": 112,
+            "val": 24,
+            "test": 24,
+            "sources": {
+                "TrashNet_Stanford": 158,
+                "original_dataset": 2
+            }
+        },
+        "Organic": {
+            "total": 160,
+            "train": 112,
+            "val": 24,
+            "test": 24,
+            "sources": {
+                "WasteClassification_Kaggle": 156,
+                "original_dataset": 4
+            }
+        },
+        "Paper": {
+            "total": 160,
+            "train": 112,
+            "val": 24,
+            "test": 24,
+            "sources": {
+                "TrashNet_Stanford": 157,
+                "original_dataset": 3
+            }
+        },
+        "Plastic": {
+            "total": 160,
+            "train": 112,
+            "val": 24,
+            "test": 24,
+            "sources": {
+                "TrashNet_Stanford": 157,
+                "original_dataset": 3
+            }
+        }
+    },
+    "total_images": 924,
+    "total_train": 646,
+    "total_val": 137,
+    "total_test": 141,
+    "classes": [
+        "E-Waste",
+        "General",
+        "Metal",
+        "Organic",
+        "Paper",
+        "Plastic"
+    ],
+    "split_ratio": {
+        "train": 0.7,
+        "val": 0.15,
+        "test": 0.15
+    },
+    "seed": 42
+}
