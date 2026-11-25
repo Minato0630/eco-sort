@@ -253,31 +253,43 @@
 
                 <div class="stats-grid">
                     <div class="stat-card">
-                        <div class="stat-icon"><i class="fa-solid fa-coins"></i></div>
+                        <div class="stat-icon-wrapper stat-icon-amber">
+                            <i class="fa-solid fa-coins"></i>
+                        </div>
                         <div class="stat-details">
                             <h3>Eco Points</h3>
-                            <p id="statPoints">0</p>
+                            <div class="stat-value" id="statPoints">0</div>
+                            <div class="stat-sub"><i class="fa-solid fa-bolt" style="color:var(--amber);"></i> Live Balance</div>
                         </div>
                     </div>
                     <div class="stat-card" style="--stat-theme: #10b981;">
-                        <div class="stat-icon"><i class="fa-solid fa-leaf"></i></div>
+                        <div class="stat-icon-wrapper stat-icon-green">
+                            <i class="fa-solid fa-leaf"></i>
+                        </div>
                         <div class="stat-details">
                             <h3>CO2 Saved</h3>
-                            <p><span id="statCO2">0.0</span> kg</p>
+                            <div class="stat-value"><span id="statCO2">0.0</span> <span style="font-size:1rem;font-weight:600;color:var(--text-muted);">kg</span></div>
+                            <div class="stat-sub"><i class="fa-solid fa-seedling" style="color:var(--emerald);"></i> Carbon Offset</div>
                         </div>
                     </div>
                     <div class="stat-card" style="--stat-theme: #3b82f6;">
-                        <div class="stat-icon"><i class="fa-solid fa-box-archive"></i></div>
+                        <div class="stat-icon-wrapper stat-icon-blue">
+                            <i class="fa-solid fa-box-archive"></i>
+                        </div>
                         <div class="stat-details">
                             <h3>Items Scanned</h3>
-                            <p id="statSorted">0</p>
+                            <div class="stat-value" id="statSorted">0</div>
+                            <div class="stat-sub"><i class="fa-solid fa-camera" style="color:#60a5fa;"></i> Verified AI Scans</div>
                         </div>
                     </div>
                     <div class="stat-card" style="--stat-theme: #f59e0b;">
-                        <div class="stat-icon"><i class="fa-solid fa-medal"></i></div>
+                        <div class="stat-icon-wrapper stat-icon-purple">
+                            <i class="fa-solid fa-medal"></i>
+                        </div>
                         <div class="stat-details">
-                            <h3>Rank</h3>
-                            <p id="statRank">#--</p>
+                            <h3>Campus Rank</h3>
+                            <div class="stat-value" id="statRank">#--</div>
+                            <div class="stat-sub"><i class="fa-solid fa-trophy" style="color:#c084fc;"></i> Leaderboard</div>
                         </div>
                     </div>
                 </div>
@@ -1150,6 +1162,12 @@
                 loadLeaderboard();
             } else if (tabId === 'profile') {
                 updateProfileTabDetails();
+            } else if (tabId === 'pickups') {
+                initPickupMap();
+                setTimeout(() => { if (pickupMapObj) pickupMapObj.invalidateSize(); }, 250);
+            } else if (tabId === 'hubs') {
+                initHubsMap();
+                setTimeout(() => { if (hubsMapObj) hubsMapObj.invalidateSize(); }, 250);
             }
         }
 
@@ -1256,9 +1274,10 @@
 
                         let avatarHtml = `<div class="avatar" style="width:24px;height:24px;font-size:0.65rem;">${log.username.charAt(0).toUpperCase()}</div>`;
                         if (log.avatar_url) {
+                            const avatarSrc = (log.avatar_url.startsWith('data:') || log.avatar_url.startsWith('http')) ? log.avatar_url : `${API_URL}/${log.avatar_url}`;
                             avatarHtml = `
                                 <div style="width:24px;height:24px;border-radius:50%;overflow:hidden;flex-shrink:0;box-shadow:0 1px 4px rgba(229,193,88,0.15);display:flex;align-items:center;justify-content:center;background:var(--card-bg);">
-                                    <img src="${API_URL}/${log.avatar_url}" style="width:100%;height:100%;object-fit:cover;">
+                                    <img src="${avatarSrc}" style="width:100%;height:100%;object-fit:cover;">
                                 </div>
                             `;
                         }
@@ -1300,9 +1319,10 @@
 
                         let avatarHtml = `<div class="avatar" style="width:34px;height:34px;font-size:0.85rem;">${l.username.charAt(0).toUpperCase()}</div>`;
                         if (l.avatar_url) {
+                            const avatarSrc = (l.avatar_url.startsWith('data:') || l.avatar_url.startsWith('http')) ? l.avatar_url : `${API_URL}/${l.avatar_url}`;
                             avatarHtml = `
                                 <div style="width:34px;height:34px;border-radius:50%;overflow:hidden;flex-shrink:0;box-shadow:0 2px 6px rgba(229,193,88,0.15);display:flex;align-items:center;justify-content:center;background:var(--card-bg);">
-                                    <img src="${API_URL}/${l.avatar_url}" style="width:100%;height:100%;object-fit:cover;">
+                                    <img src="${avatarSrc}" style="width:100%;height:100%;object-fit:cover;">
                                 </div>
                             `;
                         }
@@ -1629,7 +1649,10 @@
         let isDriverMode = false;
 
         function initPickupMap() {
-            if (pickupMapObj) return; // already initialized
+            if (pickupMapObj) {
+                setTimeout(() => { pickupMapObj.invalidateSize(); }, 150);
+                return;
+            }
 
             // Center map around Bishop Heber College campus (10.8156, 78.67336)
             const mapCenter = [10.8156, 78.67336];
@@ -1641,7 +1664,8 @@
             }).addTo(pickupMapObj);
 
             // Wait a tick to trigger resize for Leaflet bounds
-            setTimeout(() => { pickupMapObj.invalidateSize() }, 100);
+            setTimeout(() => { pickupMapObj.invalidateSize(); }, 200);
+            setTimeout(() => { pickupMapObj.invalidateSize(); }, 600);
 
             loadPickups();
         }
@@ -1812,7 +1836,10 @@
         ];
 
         function initHubsMap() {
-            if (hubsMapObj) return;
+            if (hubsMapObj) {
+                setTimeout(() => { hubsMapObj.invalidateSize(); }, 150);
+                return;
+            }
 
             const mapCenter = [10.8156, 78.67336];
             hubsMapObj = L.map('hubsMap').setView(mapCenter, 17);
@@ -1822,7 +1849,8 @@
                 attribution: '© OpenStreetMap contributors'
             }).addTo(hubsMapObj);
 
-            setTimeout(() => { hubsMapObj.invalidateSize() }, 100);
+            setTimeout(() => { hubsMapObj.invalidateSize(); }, 200);
+            setTimeout(() => { hubsMapObj.invalidateSize(); }, 600);
 
             // Populate static hubs list on sidebar
             const list = document.getElementById('hubsList');
@@ -1894,43 +1922,51 @@
 
             items.forEach(item => {
                 const card = document.createElement('div');
-                card.className = 'widget';
-                card.style.display = 'flex';
-                card.style.flexDirection = 'column';
-                card.style.gap = '12px';
+                card.className = 'guide-card';
 
                 let textCol = 'var(--general-color)';
-                if (item.category === 'plastic') textCol = 'var(--plastic-color)';
-                else if (item.category === 'paper') textCol = 'var(--paper-color)';
-                else if (item.category === 'organic') textCol = 'var(--organic-color)';
-                else if (item.category === 'metal') textCol = 'var(--metal-color)';
-                else if (item.category === 'ewaste') textCol = 'var(--ewaste-color)';
+                let bgBadge = 'rgba(107, 114, 128, 0.15)';
+                let binDot = '#9ca3af';
+
+                if (item.category === 'plastic') { textCol = 'var(--plastic-color)'; bgBadge = 'rgba(59, 130, 246, 0.15)'; binDot = '#3b82f6'; }
+                else if (item.category === 'paper') { textCol = 'var(--paper-color)'; bgBadge = 'rgba(14, 165, 233, 0.15)'; binDot = '#0ea5e9'; }
+                else if (item.category === 'organic') { textCol = 'var(--organic-color)'; bgBadge = 'rgba(16, 185, 129, 0.15)'; binDot = '#10b981'; }
+                else if (item.category === 'metal') { textCol = 'var(--metal-color)'; bgBadge = 'rgba(239, 68, 68, 0.15)'; binDot = '#ef4444'; }
+                else if (item.category === 'ewaste') { textCol = 'var(--ewaste-color)'; bgBadge = 'rgba(249, 115, 22, 0.15)'; binDot = '#f97316'; }
 
                 card.innerHTML = `
                     <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <span class="status-badge ${item.category === 'ewaste' ? 'pending' : item.category === 'plastic' ? 'claimed' : item.category === 'organic' ? 'completed' : item.category === 'paper' ? 'claimed' : 'completed'}" style="text-transform: capitalize; background: rgba(255,255,255,0.03); color: ${textCol};">
-                            ${item.categoryLabel}
+                        <span class="guide-badge" style="background:${bgBadge}; color:${textCol}; border:1px solid ${textCol}40;">
+                            <i class="fa-solid ${item.icon}"></i> ${item.categoryLabel}
                         </span>
-                        <div style="font-size:1.3rem; color:${textCol};"><i class="fa-solid ${item.icon}"></i></div>
+                        <div style="width:34px; height:34px; border-radius:50%; background:${bgBadge}; display:flex; align-items:center; justify-content:center; color:${textCol}; font-size:1.05rem;">
+                            <i class="fa-solid ${item.icon}"></i>
+                        </div>
                     </div>
-                    <h3 style="font-size:1.1rem; font-weight:700; color: #fff;">${item.name}</h3>
-                    <p style="font-size:0.8rem; color:var(--text-muted); line-height:1.4; flex-grow:1;">${item.desc}</p>
-                    <div style="border-top: 1px solid var(--border-color); padding-top:10px; display:flex; flex-direction:column; gap:6px; font-size:0.75rem;">
-                        <div style="display:flex; justify-content:space-between;">
-                            <span style="color:var(--text-muted);">Dispose in:</span>
-                            <span style="font-weight:600; color:var(--text-main);">${item.bin}</span>
+                    <div>
+                        <h3 style="font-size:1.08rem; font-weight:700; color:var(--text-main); margin-bottom:4px;">${item.name}</h3>
+                        <p style="font-size:0.82rem; color:var(--text-muted); line-height:1.45;">${item.desc}</p>
+                    </div>
+                    <div style="display:flex; flex-direction:column; gap:8px; margin-top:auto; padding-top:8px;">
+                        <div class="guide-pill">
+                            <span style="color:var(--text-muted); display:inline-flex; align-items:center; gap:6px;">
+                                <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:${binDot};"></span> Recommended Bin
+                            </span>
+                            <span style="font-weight:700; color:var(--text-main); font-size:0.78rem;">${item.bin}</span>
                         </div>
-                        <div style="display:flex; justify-content:space-between;">
-                            <span style="color:var(--text-muted);">Points Awarded:</span>
-                            <span style="font-weight:700; color:var(--primary);">+${item.points} pts</span>
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                            <div class="guide-pill" style="justify-content:center; gap:6px;">
+                                <i class="fa-solid fa-coins" style="color:var(--amber);"></i>
+                                <span style="font-weight:700; color:var(--amber);">+${item.points} pts</span>
+                            </div>
+                            <div class="guide-pill" style="justify-content:center; gap:6px;">
+                                <i class="fa-solid fa-leaf" style="color:var(--emerald);"></i>
+                                <span style="font-weight:700; color:var(--emerald);">${item.co2} CO₂</span>
+                            </div>
                         </div>
-                        <div style="display:flex; justify-content:space-between;">
-                            <span style="color:var(--text-muted);">Carbon Offset:</span>
-                            <span style="font-weight:700; color:#10b981;">${item.co2}</span>
-                        </div>
-                        <div style="display:flex; justify-content:space-between;">
-                            <span style="color:var(--text-muted);">Nearest Hub:</span>
-                            <span style="font-weight:600; color:var(--text-muted);">${item.hub}</span>
+                        <div style="font-size:0.75rem; color:var(--text-dim); display:flex; align-items:center; gap:5px; margin-top:2px;">
+                            <i class="fa-solid fa-location-dot" style="color:var(--primary);"></i>
+                            <span>${item.hub}</span>
                         </div>
                     </div>
                 `;
@@ -1982,13 +2018,19 @@
         function updateAvatarUI() {
             if (!currentUser) return;
 
-            // Append cache busting parameter to prevent image load issues on same URL
-            const avatarUrl = currentUser.avatar_url ? `${API_URL}/${currentUser.avatar_url}?v=${new Date().getTime()}` : '';
+            let avatarUrl = '';
+            if (currentUser.avatar_url) {
+                if (currentUser.avatar_url.startsWith('data:') || currentUser.avatar_url.startsWith('http://') || currentUser.avatar_url.startsWith('https://')) {
+                    avatarUrl = currentUser.avatar_url;
+                } else {
+                    avatarUrl = `${API_URL}/${currentUser.avatar_url}?v=${new Date().getTime()}`;
+                }
+            }
 
             // Sidebar Bottom Avatar
             const avatarImg = document.getElementById('avatarImage');
             const avatarLet = document.getElementById('avatarLetter');
-            if (currentUser.avatar_url) {
+            if (avatarUrl) {
                 if (avatarImg) {
                     avatarImg.src = avatarUrl;
                     avatarImg.style.display = 'block';
@@ -2008,7 +2050,7 @@
             const tabAvatarImg = document.getElementById('profileTabAvatarImage');
             const tabAvatarLet = document.getElementById('profileTabAvatarLetter');
             if (tabAvatarImg && tabAvatarLet) {
-                if (currentUser.avatar_url) {
+                if (avatarUrl) {
                     tabAvatarImg.src = avatarUrl;
                     tabAvatarImg.style.display = 'block';
                     tabAvatarLet.style.display = 'none';
@@ -2065,12 +2107,30 @@
             const file = event.target.files[0];
             if (!file) return;
 
+            // Instant client-side preview via FileReader
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                const previewUrl = e.target.result;
+                const avatarImg = document.getElementById('avatarImage');
+                const avatarLet = document.getElementById('avatarLetter');
+                const tabAvatarImg = document.getElementById('profileTabAvatarImage');
+                const tabAvatarLet = document.getElementById('profileTabAvatarLetter');
+                if (avatarImg) { avatarImg.src = previewUrl; avatarImg.style.display = 'block'; }
+                if (avatarLet) avatarLet.style.display = 'none';
+                if (tabAvatarImg) { tabAvatarImg.src = previewUrl; tabAvatarImg.style.display = 'block'; }
+                if (tabAvatarLet) tabAvatarLet.style.display = 'none';
+            };
+            reader.readAsDataURL(file);
+
             const formData = new FormData();
             formData.append("avatar", file);
-            formData.append("user_id", currentUser.id);
+            if (currentUser && currentUser.id) formData.append("user_id", currentUser.id);
+
+            const authHeaders = typeof getAuthHeaders === 'function' ? getAuthHeaders(false) : {};
 
             fetch(API_URL + "/api/profile/avatar", {
                 method: "POST",
+                headers: authHeaders,
                 body: formData
             })
                 .then(res => {
@@ -2084,10 +2144,18 @@
                     localStorage.setItem('eco_user', JSON.stringify(currentUser));
                     updateAvatarUI();
                     updateProfileTabDetails();
-                    alert("Profile picture updated successfully!");
+                    if (typeof showToast === 'function') {
+                        showToast("Profile picture updated successfully!", "success");
+                    } else {
+                        alert("Profile picture updated successfully!");
+                    }
                 })
                 .catch(err => {
-                    alert(err.message);
+                    if (typeof showToast === 'function') {
+                        showToast(err.message || "Failed to update profile picture", "error");
+                    } else {
+                        alert(err.message);
+                    }
                     console.error(err);
                 });
         }
@@ -2162,10 +2230,18 @@
                     if (locEl) locEl.innerText = loc;
 
                     updateProfileTabDetails();
-                    alert("Profile details updated successfully!");
+                    if (typeof showToast === 'function') {
+                        showToast("Profile details updated successfully!", "success");
+                    } else {
+                        alert("Profile details updated successfully!");
+                    }
                 })
                 .catch(err => {
-                    alert(err.message);
+                    if (typeof showToast === 'function') {
+                        showToast(err.message || "Failed to update profile", "error");
+                    } else {
+                        alert(err.message);
+                    }
                 });
         }
 

@@ -5,6 +5,8 @@ from werkzeug.utils import secure_filename
 from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
 from model import predict_waste
 from PIL import Image
+import io
+import base64
 import os
 import sqlite3
 import random
@@ -671,29 +673,40 @@ def profile_avatar():
         
     # Validate file extension
     ext = os.path.splitext(file.filename)[1].lower()
-    if ext not in [".png", ".jpg", ".jpeg", ".gif"]:
-        return jsonify({"error": "Invalid file type. Allowed formats: PNG, JPG, JPEG, GIF"}), 400
+    if ext not in [".png", ".jpg", ".jpeg", ".gif", ".webp"]:
+        return jsonify({"error": "Invalid file type. Allowed formats: PNG, JPG, JPEG, GIF, WEBP"}), 400
         
-    # DEFENSIVE FIX (SEC-06): Verify image structure using Pillow
+    # DEFENSIVE FIX (SEC-06): Verify image structure using Pillow & generate Base64 Data URL for zero-404 persistence
     try:
         img = Image.open(file.stream)
         img.verify()
         file.stream.seek(0)
-    except Exception:
-        return jsonify({"error": "Uploaded file is corrupted or not a valid image format"}), 400
+        img = Image.open(file.stream)
+
+        # Convert palette/transparency to clean RGB
+        if img.mode in ("RGBA", "P"):
+            img = img.convert("RGB")
+
+        # Create thumbnail (max 200x200) to keep DB compact (< 20 KB)
+        img.thumbnail((200, 200), Image.Resampling.LANCZOS)
+
+        buf = io.BytesIO()
+        img.save(buf, format="JPEG", quality=85, optimize=True)
+        buf.seek(0)
+        b64_img = base64.b64encode(buf.getvalue()).decode("utf-8")
+        avatar_url = f"data:image/jpeg;base64,{b64_img}"
+    except Exception as e:
+        return jsonify({"error": f"Uploaded file is corrupted or not a valid image format: {str(e)}"}), 400
         
-    # Ensure directories exist
-    if os.environ.get("VERCEL"):
-        avatar_dir = "/tmp/uploads/avatars"
-    else:
-        avatar_dir = "frontend/uploads/avatars"
-    os.makedirs(avatar_dir, exist_ok=True)
-    
-    filename = f"avatar_{user_id}{ext}"
-    dest_path = os.path.join(avatar_dir, filename)
-    file.save(dest_path)
-    
-    avatar_url = f"uploads/avatars/{filename}"
+    # Optional fallback local file write for local static environments
+    try:
+        avatar_dir = "/tmp/uploads/avatars" if os.environ.get("VERCEL") else "frontend/uploads/avatars"
+        os.makedirs(avatar_dir, exist_ok=True)
+        dest_path = os.path.join(avatar_dir, f"avatar_{user_id}.jpg")
+        with open(dest_path, "wb") as f:
+            f.write(buf.getvalue())
+    except Exception:
+        pass
     
     conn = get_db()
     cursor = conn.cursor()

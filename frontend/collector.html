@@ -214,6 +214,8 @@
                 maxZoom: 19,
                 attribution: '© OpenStreetMap contributors'
             }).addTo(mapObj);
+            setTimeout(() => { if (mapObj) mapObj.invalidateSize(); }, 200);
+            setTimeout(() => { if (mapObj) mapObj.invalidateSize(); }, 600);
         }
 
         function loadPickups() {
