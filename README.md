@@ -1,96 +1,206 @@
----
-title: BHC EcoSort
-emoji: ♻️
-colorFrom: blue
-colorTo: green
-sdk: docker
-app_port: 7860
----
+# Bishop Heber College — EcoSort (AI-Powered Campus Waste Management System)
 
-# Bishop Heber College - EcoSort (Waste Sorting ML)
+[![Production Deployment](https://img.shields.io/badge/Vercel-Deployed-success?style=flat&logo=vercel)](https://bhc-ecosort.vercel.app/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-forestgreen.svg)](LICENSE)
+[![Python: 3.10 | 3.12](https://img.shields.io/badge/Python-3.10%20%7C%203.12-blue.svg?logo=python)](https://www.python.org/)
+[![Model: MobileNetV2](https://img.shields.io/badge/Model-MobileNetV2%20(LiteRT)-emerald.svg)](backend/waste_classifier.tflite)
+[![Test Suite](https://img.shields.io/badge/Tests-21%2F21%20Passing-brightgreen.svg)](TESTING_REPORT.md)
 
-This repository contains the complete codebase and technical specification for **BHC EcoSort**, an AI-powered smart green portal customized for Bishop Heber College (BHC). The platform incorporates machine learning for waste classification, points-based gamification, inter-department leaderboards, cryptographic session token authentication, salted hash OTP recovery, and administrative control panels for role promotion and asynchronous model retraining.
+**BHC EcoSort** is an enterprise-grade, AI-powered smart green portal and campus solid waste classification system designed for **Bishop Heber College (Autonomous)**, Tiruchirappalli. Developed as an individual final-semester research and engineering project for the **Master of Science in Computer Science (M.Sc. CS)** degree, the platform bridges deep computer vision with campus sustainability operations.
 
-> [!NOTE]
-> **EcoSort V2 Modernization**: Features an environmental technology design system (Forest & Emerald Green), functional Light/Dark theme switching, AI scanner uncertainty states, and serverless deployment on Vercel.
+The platform provides automated waste stream segregation across six campus solid waste categories, explainable AI (Grad-CAM), uncertainty calibration, automated pickup logistics, gamified student reward points, department leaderboards, and an administrative control center.
 
 ---
 
-## 1. Project Directory & Component Index
-Below is the directory structure and component index. Click on any file path link to open the file directly:
+## Quick Navigation
+
+* 🌐 **Live Production Application:** [https://bhc-ecosort.vercel.app/](https://bhc-ecosort.vercel.app/)
+* 📦 **GitHub Repository:** [https://github.com/Minato0630/eco-sort.git](https://github.com/Minato0630/eco-sort.git)
+* 📖 **Academic Project Report (10 Chapters):** [docs/project-report/PROJECT_REPORT.md](file:///c:/Users/pandi/PROJECTS/waste-sorting-ml/docs/project-report/PROJECT_REPORT.md)
+* 📊 **Empirical Model Evaluation:** [MODEL_EVALUATION_REPORT.md](file:///c:/Users/pandi/PROJECTS/waste-sorting-ml/MODEL_EVALUATION_REPORT.md)
+* 🧪 **Automated Testing Suite (21/21 Passing):** [TESTING_REPORT.md](file:///c:/Users/pandi/PROJECTS/waste-sorting-ml/TESTING_REPORT.md)
+* 🔌 **REST API Documentation:** [API_DOCUMENTATION.md](file:///c:/Users/pandi/PROJECTS/waste-sorting-ml/API_DOCUMENTATION.md)
+* 🚀 **Vercel Serverless Architecture:** [DEPLOYMENT_REPORT.md](file:///c:/Users/pandi/PROJECTS/waste-sorting-ml/DEPLOYMENT_REPORT.md)
+
+---
+
+## 1. Key Features & Innovations
+
+### 🧠 Advanced Deep Learning (MobileNetV2 & LiteRT)
+* **High Empirical Accuracy:** Fine-tuned MobileNetV2 achieving **87.94% overall accuracy** and **87.76% macro F1-score** across 6 balanced waste streams, outperforming the initial baseline (+51.06% gain).
+* **LiteRT Edge Inference:** Quantized and exported to Google LiteRT (`backend/waste_classifier.tflite`, **2.55 MB**, 77.8% size reduction), enabling sub-50ms inference on CPU and serverless lambdas.
+* **Explainable AI (Grad-CAM):** Integrated Gradient-weighted Class Activation Mapping (`tf.GradientTape`) generating visual saliency heatmaps overlaid on uploaded images so users can understand which visual features triggered the classification.
+* **Uncertainty Calibration:** Real-time softmax probability gating with an empirically calibrated threshold of **65.0%**. Low-confidence scans return secondary candidate predictions and prompt for manual confirmation.
+
+### 🎨 Modern EcoSort V2 Design System
+* **Environmental Technology Theme:** Forest Green (`#2d6a4f`), Emerald Green (`#52b788`), Charcoal, and Clean Slate palettes.
+* **Functional Theme Engine:** Seamless Light and Dark mode switching persistent via `localStorage` with system-preference detection (`frontend/js/theme.js`).
+* **Interactive Dashboards:** Tailored interfaces for Students, Campus Waste Collectors, and Administrative Staff with Leaflet.js campus maps and Chart.js telemetry.
+* **Responsive Audio-Visual Feedback:** Real-time webcam scanning with laser animation, drag-and-drop file processing, and toast notifications.
+
+### 🛡️ Enterprise Security & Data Integrity
+* **Cryptographic Session Authentication:** Signed Bearer tokens via itsdangerous `URLSafeTimedSerializer` (`Authorization: Bearer <token>`).
+* **Strict Role-Based Access Control (RBAC):** Hierarchical permissions across `Student`, `Collector`, `Admin`, and `SuperAdmin`.
+* **Zero Trust & IDOR Protection:** Students can only view and modify their own scans and pickups; department admins are isolated to their specific academic departments.
+* **Safe OTP Password Recovery:** 6-digit one-time password stored in-memory as salted SHA-256 hashes with 10-minute expiry; zero OTP exposure in API payloads.
+* **Comprehensive Activity Telemetry:** Full audit trail logging in SQLite (`activity_logs`) capturing user IDs, timestamps, actions, and client IP addresses.
+
+---
+
+## 2. System Architecture
+
+EcoSort implements a 3-tier decoupled architecture supporting both local server execution and serverless edge deployment on Vercel:
+
+```text
+┌────────────────────────────────────────────────────────────────────────┐
+│                        PRESENTATION TIER (CLIENT)                      │
+│                                                                        │
+│   Student Portal          Admin Governance          Collector Hub      │
+│  (frontend/index.html)   (frontend/admin.html)  (frontend/collector.html│
+│           │                       │                         │          │
+│           └───────────────────────┴─────────────────────────┘          │
+│                                   │                                    │
+│                 EcoSort Design System & Theme Engine                   │
+│               (frontend/css/ecosort.css, js/theme.js)                  │
+└───────────────────────────────────┬────────────────────────────────────┘
+                                    │ HTTPS / REST (JSON + Multipart)
+                                    ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│                        APPLICATION TIER (BACKEND)                      │
+│                                                                        │
+│                           Flask REST Server                            │
+│                  (backend/app.py / api/index.py)                       │
+│                                   │                                    │
+│  ┌─────────────────┬──────────────┴───┬─────────────────┐              │
+│  │ Auth & RBAC     │ Prediction       │ Pickup Dispatch │ Audit Logs   │
+│  │ (itsdangerous)  │ Controller       │ Manager         │ Telemetry    │
+│  └─────────────────┴──────────────┬───┴─────────────────┴──────────────┘
+│                                   │
+│                                   ▼
+│                 Deep Learning Classification Engine                     │
+│                       (backend/model.py)                               │
+│                   ├── LiteRT Runtime (ai-edge-litert)                  │
+│                   ├── MobileNetV2 (.tflite / .h5)                      │
+│                   ├── Uncertainty Evaluator (Threshold = 65%)          │
+│                   └── Grad-CAM Visual Explainability                   │
+└───────────────────────────────────┬────────────────────────────────────┘
+                                    │ SQL (Row Factory / Parameterized)
+                                    ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│                          DATA PERSISTENCE TIER                         │
+│                                                                        │
+│                     Relational Database (SQLite3)                      │
+│        Tables: users | waste_logs | pickups | activity_logs            │
+│                     (ACID Compliant Transactions)                      │
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 3. Project Directory Structure
 
 ```text
 c:\Users\pandi\PROJECTS\waste-sorting-ml
-├── .vscode/                     # Editor configurations
-├── backend/                     # Python Flask API & Machine Learning core
-│   ├── app.py                   # REST API server & database manager
-│   ├── model.py                 # Neural network prediction & category mapper
-│   ├── train.py                 # Transfer learning training pipeline script
-│   ├── prep_dataset.py          # Dataset copy & subfolder distribution script
-│   ├── class_indices.json       # JSON mapping for custom model indices
-│   └── waste_classifier.h5      # Custom trained TensorFlow Keras model
-├── dataset/                     # ML Training dataset organized by class subfolders
-│   ├── E-Waste/
-│   ├── General/
-│   ├── Metal/
-│   ├── Organic/
-│   ├── Paper/
-│   └── Plastic/
-├── frontend/                    # Web client assets
-│   ├── admin.html               # Administrative control panel Dashboard
-│   ├── collector.html           # Campus Garbage Collector work order panel
-│   ├── index.html               # Main Student/General User login & scanning dashboard
-│   ├── css/ecosort.css          # EcoSort Unified Environmental Tech Design System
-│   ├── js/theme.js              # Theme engine, toast notification & auth helpers
-│   ├── bhc-logo.png             # Bishop Heber College emblem
-│   ├── ecosort-logo.png         # EcoSort system branding logo
-│   └── uploads/                 # Static uploads folder (holds profile avatars)
-│       └── avatars/             # Saved profile picture files
-├── IMAGES/                      # Local cache of training and testing images
-├── requirements.txt             # Global python package specifications
-├── run.bat                      # Windows one-click startup automation batch script
-└── waste_sorting.db             # Local SQLite database file
+├── api/                            # Vercel serverless entrypoint
+│   └── index.py                    # Serverless Flask handler wrapper
+├── backend/                        # Python Flask API & Deep Learning core
+│   ├── app.py                      # REST API routes, RBAC decorators & database managers
+│   ├── model.py                    # LiteRT/TensorFlow inference, Grad-CAM & thresholding
+│   ├── train.py                    # Two-stage transfer learning & fine-tuning script
+│   ├── prep_dataset.py             # Dataset preprocessing and validation utility
+│   ├── class_indices.json          # 6-class index mapping
+│   ├── waste_classifier.h5         # Custom fine-tuned Keras model (11.2 MB)
+│   └── waste_classifier.tflite     # Quantized LiteRT FlatBuffer model (2.55 MB)
+├── dataset_curated/                # 924 Verified Real-World Images (70/15/15 Split)
+│   ├── train/                      # 646 Training images across 6 balanced classes
+│   ├── val/                        # 137 Validation images
+│   └── test/                       # 141 Untouched test images
+├── docs/                           # Academic documentation & specifications
+│   ├── diagrams/                   # System design, DFD, and architecture diagrams
+│   └── project-report/             # Complete 10-chapter academic project report
+│       └── PROJECT_REPORT.md       # Full dissertation specification
+├── frontend/                       # Client web application
+│   ├── admin.html                  # Administrative Governance & Retraining Console
+│   ├── collector.html              # Campus Waste Collector Dispatch Portal
+│   ├── index.html                  # Student Portal & AI Waste Scanner
+│   ├── css/
+│   │   └── ecosort.css             # EcoSort V2 Environmental Tech Design System
+│   ├── js/
+│   │   └── theme.js                # Theme switcher, notifications, token auth helpers
+│   ├── bhc-logo.png                # Official Bishop Heber College crest
+│   └── ecosort-logo.png            # EcoSort logo emblem
+├── reports/                        # Empirical evaluation artifacts & figures
+│   ├── confusion_matrix.png        # 141-sample test confusion matrix visualization
+│   ├── evaluation_report.json      # Per-class precision, recall, and F1 metrics
+│   ├── sample_gradcam.png          # Visual explanation heatmap demonstration
+│   ├── training_curves.png         # Accuracy and cross-entropy loss convergence curves
+│   └── training_history.json       # Epoch-by-epoch training telemetry
+├── scratch/                        # Automated regression and integration test suites
+│   ├── test_phase1_ui.py           # Phase 1 UI/UX design & theme validation suite (4 tests)
+│   ├── test_phase2_ml.py           # Phase 2 ML pipeline, Grad-CAM & edge tests (12 tests)
+│   └── test_phase3_e2e.py          # Phase 3 full lifecycle & RBAC integration suite (5 tests)
+├── .env.example                    # Environment variable template
+├── .gitignore                      # Git exclusion rules (ignores *.db, credentials, uploads)
+├── API_DOCUMENTATION.md            # Complete REST API route specifications
+├── DATASET_DOCUMENTATION.md        # Dataset provenance and curation analysis
+├── DEPLOYMENT_REPORT.md            # Production deployment report (Vercel Serverless)
+├── EXPERIMENT_RESULTS.md           # Deep learning hyperparameter tuning results
+├── KNOWN_LIMITATIONS.md            # Technical constraints and future research roadmap
+├── MODEL_EVALUATION_REPORT.md      # Empirical metrics, baseline comparisons & test results
+├── MODEL_TRAINING_REPORT.md        # Two-stage transfer learning training methodology
+├── requirements.txt                # Production Python dependencies
+├── run.bat                         # Local one-click Windows execution batch script
+├── SECURITY_AUDIT_REPORT.md        # Full security audit and remediation report
+├── SYSTEM_INTEGRATION_REPORT.md    # Multi-tier system integration report
+├── TESTING_REPORT.md               # 21/21 passing automated test suite execution report
+└── vercel.json                     # Vercel dual-builder static + serverless routing config
 ```
 
-### Components Link Map:
-* **REST API Controller**: [backend/app.py](file:///C:/Users/pandi/PROJECTS/waste-sorting-ml/backend/app.py)
-* **AI Model Loader & Predictor**: [backend/model.py](file:///C:/Users/pandi/PROJECTS/waste-sorting-ml/backend/model.py)
-* **Transfer Learning Trainer**: [backend/train.py](file:///C:/Users/pandi/PROJECTS/waste-sorting-ml/backend/train.py)
-* **Dataset Preprocessing**: [backend/prep_dataset.py](file:///C:/Users/pandi/PROJECTS/waste-sorting-ml/backend/prep_dataset.py)
-* **Class Mapping Indices**: [backend/class_indices.json](file:///C:/Users/pandi/PROJECTS/waste-sorting-ml/backend/class_indices.json)
-* **Main Student Portal**: [frontend/index.html](file:///C:/Users/pandi/PROJECTS/waste-sorting-ml/frontend/index.html)
-* **Collector Run Portal**: [frontend/collector.html](file:///C:/Users/pandi/PROJECTS/waste-sorting-ml/frontend/collector.html)
-* **Admin Dashboard**: [frontend/admin.html](file:///C:/Users/pandi/PROJECTS/waste-sorting-ml/frontend/admin.html)
-* **Startup Script**: [run.bat](file:///C:/Users/pandi/PROJECTS/waste-sorting-ml/run.bat)
-* **Python Requirements**: [requirements.txt](file:///C:/Users/pandi/PROJECTS/waste-sorting-ml/requirements.txt)
+---
+
+## 4. Machine Learning Classification Pipeline
+
+### Waste Stream Mapping & Reward Metrics
+
+The classification engine maps incoming imagery into six categories aligned with Bishop Heber College's waste management infrastructure:
+
+| Category | Bin Designation | Color Code | Student Reward | Carbon Offset | Campus Disposal Guidance |
+| :--- | :--- | :---: | :---: | :---: | :--- |
+| **Organic** | Compost Pit | Green | +5 pts | 0.4 kg CO₂ | Deposit in green compost bins. Exclude non-biodegradable wrappers or plastic stickers. |
+| **Plastic** | Clean Recyclables | Blue | +10 pts | 1.2 kg CO₂ | Empty liquids, rinse, and crush bottles to reduce volume before placing in the blue bin. |
+| **Paper** | Clean Recyclables | Blue | +8 pts | 0.9 kg CO₂ | Keep clean and dry. Flatten cardboard cartons and remove heavy packaging adhesive tape. |
+| **Metal** | Scrap Recyclables | Red | +15 pts | 1.8 kg CO₂ | Rinse beverage cans and food tins. Deposit clean scrap in designated red bins. |
+| **E-Waste** | Specialized Counter | Orange | +25 pts | 2.5 kg CO₂ | Hand over to the campus hardware repair depot or hazardous collection point. Do not crush. |
+| **General** | Sanitary Landfill | Gray | +2 pts | 0.1 kg CO₂ | Non-recyclable composite waste destined for contained municipal processing. |
+
+### Empirical Model Performance (Evaluated on $N=141$ Real Test Images)
+
+| Evaluation Metric | Baseline Model (V1) | Improved Model (V2) | Relative Gain |
+| :--- | :---: | :---: | :---: |
+| **Overall Accuracy** | 36.88% | **87.94%** | **+51.06%** |
+| **Macro Precision** | 31.96% | **88.50%** | **+56.54%** |
+| **Macro Recall** | 36.86% | **87.75%** | **+50.89%** |
+| **Macro F1-Score** | 32.20% | **87.76%** | **+55.56%** |
+| **Weighted F1-Score** | 32.20% | **87.88%** | **+55.68%** |
+| **Model Footprint** | 11.5 MB | **2.55 MB (LiteRT)** | **-77.8%** |
+
+### Per-Class Test Breakdown
+
+* **E-Waste:** Precision: **100.0%** | Recall: **100.0%** | F1-Score: **100.0%**
+* **Organic:** Precision: **100.0%** | Recall: **100.0%** | F1-Score: **100.0%**
+* **Paper:** Precision: **95.2%** | Recall: **83.3%** | F1-Score: **88.9%**
+* **Metal:** Precision: **74.2%** | Recall: **95.8%** | F1-Score: **83.6%**
+* **Plastic:** Precision: **82.6%** | Recall: **79.2%** | F1-Score: **80.9%**
+* **General:** Precision: **78.9%** | Recall: **68.2%** | F1-Score: **73.2%**
 
 ---
 
-## 2. Technical Stack & Dependencies
+## 5. Database Schema
 
-### Backend Technologies
-* **Language**: Python 3.12 (Vercel Serverless & Local Virtual Environment)
-* **Framework**: Flask (v3.1.2) with Flask-Cors (v6.0.2) and URLSafeTimedSerializer for cryptographic tokens.
-* **Machine Learning**: Google LiteRT (`ai-edge-litert` / TensorFlow Lite), NumPy, and Pillow for structural image validation.
-* **Database**: SQLite3 utilizing SQLite Row factory mappings.
-* **Server**: Gunicorn (for production/Docker deployment).
+The SQLite database (`waste_sorting.db`) implements ACID-compliant transactional persistence across four core tables:
 
-### Frontend Technologies
-* **Core**: Semantic HTML5 and JavaScript (Vanilla ES6).
-* **Styling**: EcoSort Environmental Tech Design System (`css/ecosort.css`) featuring Forest Green (`#2d6a4f`), Emerald (`#52b788`), Charcoal, and Off-White palettes with functional Light and Dark mode options.
-* **Libraries**:
-  * **Chart.js (v4.4.0)**: Interactive dashboard charts.
-  * **Leaflet.js (v1.9.4)**: Canvas-based interactive mapping of campus blocks and pickup hubs.
-  * **FontAwesome (v6.4.0)**: Icons for the classification bins and UI components.
-
----
-
-## 3. Database Schema
-The SQLite database `waste_sorting.db` is initialized on server startup via `init_db()` in [app.py](file:///C:/Users/pandi/PROJECTS/waste-sorting-ml/backend/app.py). It maintains three primary tables:
-
-### A. `users` Table
-Stores accounts with hierarchical role permissions and points metrics.
 ```sql
+-- 1. User Directory with Hierarchical RBAC
 CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     username TEXT UNIQUE NOT NULL,
@@ -99,7 +209,7 @@ CREATE TABLE IF NOT EXISTS users (
     co2_saved REAL DEFAULT 0.0,
     department TEXT,
     hostel TEXT,
-    role TEXT DEFAULT 'Student', -- Hierarchical Roles: Student, Collector, Admin, SuperAdmin
+    role TEXT DEFAULT 'Student', -- 'Student', 'Collector', 'Admin', 'SuperAdmin'
     avatar_url TEXT DEFAULT NULL,
     reg_no TEXT DEFAULT NULL,
     phone TEXT DEFAULT NULL,
@@ -108,11 +218,8 @@ CREATE TABLE IF NOT EXISTS users (
     section TEXT DEFAULT NULL,
     shift TEXT DEFAULT NULL
 );
-```
 
-### B. `waste_logs` Table
-Maintains logs of individual AI waste scans.
-```sql
+-- 2. Audit Log of AI Classification Scans
 CREATE TABLE IF NOT EXISTS waste_logs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER,
@@ -124,11 +231,8 @@ CREATE TABLE IF NOT EXISTS waste_logs (
     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users (id)
 );
-```
 
-### C. `pickups` Table
-Schedules bulky campus collection requests.
-```sql
+-- 3. Bulky Campus Waste Collection Requests
 CREATE TABLE IF NOT EXISTS pickups (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL,
@@ -136,206 +240,177 @@ CREATE TABLE IF NOT EXISTS pickups (
     block_name TEXT NOT NULL,
     room_number TEXT NOT NULL,
     date_time TEXT NOT NULL,
-    status TEXT DEFAULT 'Pending', -- States: Pending, Claimed, Completed
+    status TEXT DEFAULT 'Pending', -- 'Pending', 'Claimed', 'Completed'
     claimed_by INTEGER,
     FOREIGN KEY (user_id) REFERENCES users (id),
     FOREIGN KEY (claimed_by) REFERENCES users (id)
+);
+
+-- 4. Enterprise Security Activity & Telemetry Audit Log
+CREATE TABLE IF NOT EXISTS activity_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
+    action TEXT NOT NULL,
+    details TEXT,
+    ip_address TEXT,
+    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users (id)
 );
 ```
 
 ---
 
-## 4. REST API Endpoint Specifications
+## 6. REST API Reference
 
-All endpoints are hosted in [app.py](file:///C:/Users/pandi/PROJECTS/waste-sorting-ml/backend/app.py):
+All endpoints return JSON responses with standard HTTP status codes (`200 OK`, `400 Bad Request`, `401 Unauthorized`, `403 Forbidden`, `404 Not Found`, `500 Internal Error`). Protected routes require `Authorization: Bearer <token>`.
 
-### 1. Authentication Module
-* **`POST /api/register`**: Validates parameters and inserts user with default role `'Student'`. Prevents duplicate usernames or registration numbers.
-* **`POST /api/login`**: Validates credentials. Supports logging in using **Username** or **Registration Number**. Returns complete user metadata object.
-* **`POST /api/profile/update`**: Modifies user fields. Requires current password verification for any password modification.
-* **`POST /api/profile/avatar`**: Saves profile pictures locally to `frontend/uploads/avatars/avatar_<id>.<ext>` and binds filepath to the user database row.
-
-### 2. OTP Password Recovery Module
-* **`POST /api/forgot-password/request`**: Simulates sending a 6-digit OTP code to verified accounts. Stores OTP in-memory with a 10-minute expiry time limit.
-* **`POST /api/forgot-password/reset`**: Verifies the sent OTP against the user ID. If valid, replaces the user's password hash with the new password.
-
-### 3. Classification & Logs Module
-* **`POST /predict`**: Accepts a multi-part file upload, saves the temporary image to `uploads/`, calls the neural network engine, awards user points and CO2 offsets, and adds a log to `waste_logs`.
-* **`GET /api/logs`**: Returns the last 15 scans. If `user_id` query parameter is provided, returns user-specific scans; otherwise returns global college feed scans.
-* **`GET /api/leaderboard`**: Returns the top 10 users ranked by points desc.
-* **`GET /api/stats/departments`**: Aggregates point sums, CO2 reductions, and student participation counts grouped by college departments.
-
-### 4. Bulk Pickups Module
-* **`POST /api/pickups`**: Schedules a bulk pickup specifying the block, room, time, and type.
-* **`GET /api/pickups`**: Retrieves all active scheduled pickups.
-* **`POST /api/pickups/claim`**: Collector claims/completes a pickup. Upon completion, awards **+50 points** to the Collector, calculates student rewards based on waste type, and updates the status to `'Completed'`.
-* **`POST /api/admin/pickups/delete`**: Administrative override to permanently remove a pickup request.
-
-### 5. Retraining & Administrative Modules
-* **`GET /api/admin/stats`**: Role-guarded stats. regular `Admin` accounts see department-specific aggregates; `SuperAdmin` accounts see college-wide globals.
-* **`GET /api/admin/users`**: Lists the user directory (guarded by department bounds for regular department admins).
-* **`POST /api/admin/users/role`**: Updates user roles (`Student`, `Collector`, `Admin`, `SuperAdmin`). regular department admins can only modify users within their department.
-* **`POST /api/admin/retrain`**: Spawns an asynchronous Python thread executing [train.py](file:///C:/Users/pandi/PROJECTS/waste-sorting-ml/backend/train.py) in the background.
-* **`GET /api/admin/retrain/status`**: Returns the retraining execution state (`Idle`, `Training`, `Completed`, `Failed`) along with the live terminal log buffer.
+| Method | Endpoint | Access Level | Description |
+| :--- | :--- | :---: | :--- |
+| `POST` | `/api/register` | Public | Registers a student account (defaults strictly to `role: 'Student'`). |
+| `POST` | `/api/login` | Public | Authenticates credentials; returns user profile and signed Bearer token. |
+| `POST` | `/api/profile/update` | Authenticated | Updates student contact information and password (requires current password). |
+| `POST` | `/api/profile/avatar` | Authenticated | Uploads and binds profile pictures (validates image headers). |
+| `POST` | `/api/forgot-password/request` | Public | Generates a 6-digit salted OTP with 10-minute validity. |
+| `POST` | `/api/forgot-password/reset` | Public | Verifies OTP against the account and resets the password securely. |
+| `POST` | `/predict` | Public / Auth | Classifies waste image; returns predicted class, confidence, top-3 candidates, Grad-CAM, and guidance. |
+| `GET` | `/api/logs` | Authenticated | Fetches recent scan history (IDOR protected: users only see their own scans). |
+| `GET` | `/api/leaderboard` | Public | Retrieves top student environmental champions ranked by reward points. |
+| `GET` | `/api/stats/departments` | Public | Aggregates recycling volumes, CO2 reductions, and points by department. |
+| `GET` | `/api/pickups` | Authenticated | Retrieves pending or assigned bulk collection requests. |
+| `POST` | `/api/pickups` | Student | Submits a scheduled collection request for bulky waste. |
+| `POST` | `/api/pickups/claim` | Collector | Claims or marks a collection request as completed (+50 collector points). |
+| `GET` | `/api/admin/stats` | Admin | Retrieves department or college-wide operational metrics and activity charts. |
+| `GET` | `/api/admin/users` | Admin | Lists student directory within the administrator's authorized department. |
+| `POST` | `/api/admin/users/role` | Admin | Updates user role (department admins restricted to their department). |
+| `GET` | `/api/admin/activity-logs` | Admin | Audits system actions, logins, scans, and security events. |
+| `GET` | `/api/admin/model-info` | Admin | Reports model version, architecture parameters, LiteRT status, and accuracy metrics. |
+| `POST` | `/api/admin/retrain` | SuperAdmin | Dispatches an asynchronous model fine-tuning job in a background thread. |
+| `GET` | `/api/admin/retrain/status` | SuperAdmin | Streams real-time training console logs and job completion status. |
 
 ---
 
-## 5. Machine Learning Classification Pipeline
+## 7. Installation & Local Development
 
-The classification module in [model.py](file:///C:/Users/pandi/PROJECTS/waste-sorting-ml/backend/model.py) integrates a dual-mode prediction engine:
+### Prerequisites
+* Windows 10/11, macOS, or Linux
+* Python 3.10 or Python 3.12
+* Git command line tools
 
-### A. Initialization & Model Fallback
-```python
-# Loads base MobileNetV2 pretrained on ImageNet
-imagenet_model = tf.keras.applications.MobileNetV2(weights="imagenet", include_top=True)
+### Setup Steps
 
-def load_custom_model_if_available():
-    global custom_model, class_indices
-    if custom_model is None and os.path.exists("backend/waste_classifier.h5") and os.path.exists("backend/class_indices.json"):
-        custom_model = tf.keras.models.load_model("backend/waste_classifier.h5")
-        with open("backend/class_indices.json", "r") as f:
-            class_indices = json.load(f)
-```
-* If a custom transfer learning model is present, the app utilizes it for predicting the 6 class categories.
-* If unavailable, the server runs predictions against the 1000-class ImageNet MobileNetV2 model and maps the output class labels using keyword search patterns.
-
-### B. Classification Mapping and Reward Values
-Predicted labels are passed to `map_label_to_category()`, mapping products to color-coded bins and scores:
-
-| Classification | Keyword Search Matches | Waste Bin Recommendation | Points | CO₂ saved |
-| :--- | :--- | :--- | :---: | :---: |
-| **E-Waste / Hazardous** | `phone`, `computer`, `laptop`, `battery`, `cable`, `bulb`, `led` | Orange Bin (Special Collection) | 25 | 2.5 kg |
-| **Organic Waste** | `banana`, `apple`, `fruit`, `vegetable`, `food`, `leaf`, `compost` | Green Bin (Compost Pit) | 5 | 0.4 kg |
-| **Recyclable (Plastic)** | `bottle`, `cup`, `plastic`, `container`, `wrapper`, `straw`, `pen` | Blue Bin (Recyclables) | 10 | 1.2 kg |
-| **Recyclable (Paper/Cardboard)** | `paper`, `cardboard`, `box`, `book`, `magazine`, `receipt`, `sheet` | Blue Bin (Recyclables) | 8 | 0.9 kg |
-| **Recyclable (Metal)** | `can`, `tin`, `metal`, `iron`, `brass`, `steel`, `foil`, `wire` | Red Bin (Metal Recyclables) | 15 | 1.8 kg |
-| **General Waste / Landfill** | *Fallback default match* | Gray Bin (General Landfill) | 2 | 0.1 kg |
-
----
-
-## 6. Asynchronous ML Training Pipeline
-The script [train.py](file:///C:/Users/pandi/PROJECTS/waste-sorting-ml/backend/train.py) fine-tunes a custom classifier head. It does transfer learning using Keras:
-
-1. **Dataset Structure**: Creates folders `dataset/` containing subfolders: `Organic`, `Plastic`, `Paper`, `Metal`, `E-Waste`, `General`.
-2. **Data Augmentation**: Sets up an `ImageDataGenerator` configured with a 20% validation split:
-   ```python
-   train_datagen = ImageDataGenerator(
-       rescale=1./255,
-       rotation_range=20,
-       width_shift_range=0.2,
-       height_shift_range=0.2,
-       shear_range=0.2,
-       zoom_range=0.2,
-       horizontal_flip=True,
-       fill_mode='nearest',
-       validation_split=0.2
-   )
+1. **Clone the Repository:**
+   ```bash
+   git clone https://github.com/Minato0630/eco-sort.git
+   cd eco-sort
    ```
-3. **Model Construction**:
-   * Base architecture: `MobileNetV2` with weights from ImageNet, `include_top=False`, and frozen weights (`base_model.trainable = False`).
-   * Custom Head:
-     ```python
-     x = tf.keras.layers.GlobalAveragePooling2D()(base_model.output)
-     x = tf.keras.layers.Dense(128, activation='relu')(x)
-     x = tf.keras.layers.Dropout(0.3)(x)
-     outputs = tf.keras.layers.Dense(len(classes), activation='softmax')(x)
+
+2. **Configure Python Virtual Environment:**
+   ```bash
+   python -m venv venv
+   
+   # Windows PowerShell
+   .\venv\Scripts\Activate.ps1
+
+   # Linux / macOS
+   source venv/bin/activate
+   ```
+
+3. **Install Dependencies:**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+4. **Initialize Database & Run Application:**
+   * **Windows One-Click:** Double-click `run.bat` or run:
+     ```powershell
+     .\run.bat
      ```
-4. **Compilation & Training Parameters**:
-   * Optimizer: Adam (`learning_rate=0.001`)
-   * Loss: `categorical_crossentropy`
-   * Metrics: `accuracy`
-   * Hyperparameters: Epochs = 8, Batch Size = 4
-5. **Artifacts Output**: Writes classification index mapping to `backend/class_indices.json` and exports weights to `backend/waste_classifier.h5`.
+   * **Standard Python:**
+     ```bash
+     cd backend
+     python app.py
+     ```
+   The application will initialize the SQLite schema and start serving at:
+   ```text
+   http://127.0.0.1:5000
+   ```
 
 ---
 
-## 7. Dataset Setup Helper
-The utility [prep_dataset.py](file:///C:/Users/pandi/PROJECTS/waste-sorting-ml/backend/prep_dataset.py) automatically processes initial image layouts. It maps raw image arrays into directory structures under their respective classes:
+## 8. Automated Test Suite Execution
 
-```python
-ORIGINAL_MAPPING = {
-    "Newspaper.jpg": "Paper",
-    "Plastic carry bag.jpg": "Plastic",
-    "Waterbottle.jpg": "Plastic",
-    "apple_core.jpg": "Organic",
-    "banana peel.jpg": "Organic",
-    "circuit board.jpg": "E-Waste",
-    "food tins.jpg": "Metal",
-    "food wrapper.jpg": "General",
-    "mobile wate.jpg": "E-Waste",
-    "soda_can.jpg": "Metal",
-    "soft drink.jpg": "Plastic"
-}
+EcoSort maintains a rigorous automated testing framework covering UI/UX elements, machine learning inference safety, and end-to-end user workflows:
+
+```bash
+# Run all three automated test suites
+python scratch/test_phase1_ui.py
+python scratch/test_phase2_ml.py
+python scratch/test_phase3_e2e.py
 ```
-It copies original assets from [IMAGES/](file:///C:/Users/pandi/PROJECTS/waste-sorting-ml/IMAGES) and distributes them into the structured `dataset/<class>` folders, laying the framework for immediate transfer learning model training.
+
+### Verified Test Results Summary
+
+```text
+======================================================================
+TEST SUITE 1: Phase 1 UI/UX Design System (scratch/test_phase1_ui.py)
+----------------------------------------------------------------------
+4 / 4 Tests Passed (Theme switcher, CSS integration, modal dialogs) - OK
+
+======================================================================
+TEST SUITE 2: Phase 2 Deep Learning Engine (scratch/test_phase2_ml.py)
+----------------------------------------------------------------------
+12 / 12 Tests Passed (LiteRT loading, [-1, 1] normalization, Grad-CAM,
+                      rejection of corrupted files, uncertainty gating) - OK
+
+======================================================================
+TEST SUITE 3: Phase 3 E2E Integration (scratch/test_phase3_e2e.py)
+----------------------------------------------------------------------
+5 / 5 Tests Passed (Full student/collector/admin lifecycles, RBAC tokens,
+                    IDOR checks, and transaction persistence) - OK
+
+TOTAL RESULT: 21 / 21 PASS (100% Pass Rate)
+======================================================================
+```
 
 ---
 
-## 8. Frontend Portal Implementations
+## 9. Cloud Deployment (Vercel Serverless)
 
-The frontend uses a dark-theme UI with responsive sidebars and tabbed layouts:
+The application is deployed to production on Vercel at [https://bhc-ecosort.vercel.app/](https://bhc-ecosort.vercel.app/).
 
-### A. Core Styling Systems
-* **Glassmorphism Variables**:
-  ```css
-  :root {
-      --bg-color: #030712;
-      --sidebar-bg: rgba(10, 15, 30, 0.7);
-      --card-bg: rgba(17, 24, 39, 0.45);
-      --border-color: rgba(229, 193, 88, 0.1);
-      --primary: #e5c158; /* Bishop Heber College Gold */
-      --secondary: #1e40af; /* Bishop Heber College Royal Blue */
-  }
-  ```
-* Seamless animations: Hover scaling, card slides, fade-in transitions, and a looping vertical scanning laser beam effect on the web camera interface.
-
-### B. Student Dashboard (`index.html`)
-* **Authentication Forms**: Seamlessly toggles between Login, Register (including detailed BHC registration numbers, class, section, shift, and hostel details), and Forgot Password Modals.
-* **AI Waste Scan Center**: Accesses the webcam via `navigator.mediaDevices.getUserMedia` or allows Drag-and-Drop image uploads. Intercepts files and updates points via Ajax `/predict` API request.
-* **Bulk Collection Scheduler**: Form to schedule garbage collections, mapping college buildings like "Computer Science Block", "Admin Block", or "Schwartz Hostel".
-* **Leaflet Hub Location Finder**: Centers on BHC Campus coordinates `[10.8156, 78.67336]` mapping custom marker pins representing campus recycling centers.
-* **BHC Recycling Handbook**: Comprehensive list of recyclable materials showing recommended bins, award points, and carbon details.
-
-### C. Collector Dashboard (`collector.html`)
-* **Campus Map System**: Leaflet map pins reflecting active scheduled pickups colored by state (Yellow = Pending, Blue = Claimed, Green = Completed).
-* **Claims Handling**: Clickable map popups or list buttons to issue `Claim` or `Collect` actions.
-* **Gamified Scoreboard**: Tracking and updating collector scores on the sidebar dashboard.
-
-### D. Admin Control Panel (`admin.html`)
-* **User Promotion**: Renders list views of students allowing role changes to `Collector` or `Admin` (regular department admins are restricted to their department).
-* **AI Control Room Console**: Retrain button triggering `/api/admin/retrain` endpoint. It polls `/api/admin/retrain/status` every 25 seconds, displaying real-time output terminal lines with color-coded classes (`success`, `info`, `error`).
-* **Pickup Override**: Controls to remove/clear pickup entries.
+The deployment architecture utilizes a hybrid configuration specified in `vercel.json`:
+* **Static Assets:** Handled by `@vercel/static` serving `frontend/**` (HTML, CSS, JS, branding assets).
+* **Serverless Backend:** Python 3.12 runtime powered by `@vercel/python` executing `api/index.py`.
+* **Lightweight ML Inference:** Powered by `ai-edge-litert>=1.0.1` loading the 2.55 MB LiteRT FlatBuffer model with fast cold-start performance (<1.2s).
 
 ---
 
-## 9. How to Install and Run the Project
+## 10. Academic Project Documentation Index
 
-Follow these steps to set up the environment and run the application locally on Windows:
+For detailed dissertation chapters, design specifications, and mathematical formulations, refer to the following documentation:
 
-### Step 1: Install Python & Package Manager
-Ensure you have Python 3.10 installed on your system.
+| Document | Purpose & Contents |
+| :--- | :--- |
+| **[PROJECT_REPORT.md](file:///c:/Users/pandi/PROJECTS/waste-sorting-ml/docs/project-report/PROJECT_REPORT.md)** | Full 10-chapter academic dissertation report covering Introduction, Literature Review, System Architecture, AI Methodology, Implementation, Experimental Results, Testing, Security, and Conclusions. |
+| **[MODEL_EVALUATION_REPORT.md](file:///c:/Users/pandi/PROJECTS/waste-sorting-ml/MODEL_EVALUATION_REPORT.md)** | Empirical evaluation against baseline V1: confusion matrix, precision/recall/F1, and LiteRT quantization metrics. |
+| **[MODEL_TRAINING_REPORT.md](file:///c:/Users/pandi/PROJECTS/waste-sorting-ml/MODEL_TRAINING_REPORT.md)** | Two-stage transfer learning training methodology, augmentation hyper-parameters, and fine-tuning details. |
+| **[SYSTEM_INTEGRATION_REPORT.md](file:///c:/Users/pandi/PROJECTS/waste-sorting-ml/SYSTEM_INTEGRATION_REPORT.md)** | Technical integration review of client, backend, database, and inference modules. |
+| **[TESTING_REPORT.md](file:///c:/Users/pandi/PROJECTS/waste-sorting-ml/TESTING_REPORT.md)** | Comprehensive QA report validating 21/21 automated tests across UI, ML, and E2E suites. |
+| **[SECURITY_AUDIT_REPORT.md](file:///c:/Users/pandi/PROJECTS/waste-sorting-ml/SECURITY_AUDIT_REPORT.md)** | Security vulnerability remediation report covering SEC-01 through SEC-09. |
+| **[API_DOCUMENTATION.md](file:///c:/Users/pandi/PROJECTS/waste-sorting-ml/API_DOCUMENTATION.md)** | Detailed specification of all REST API endpoints, request bodies, and JSON responses. |
+| **[DATASET_DOCUMENTATION.md](file:///c:/Users/pandi/PROJECTS/waste-sorting-ml/DATASET_DOCUMENTATION.md)** | Inventory and data distribution analysis for the 924 curated images. |
+| **[DEPLOYMENT_REPORT.md](file:///c:/Users/pandi/PROJECTS/waste-sorting-ml/DEPLOYMENT_REPORT.md)** | Serverless edge deployment architecture and runtime configurations. |
+| **[KNOWN_LIMITATIONS.md](file:///c:/Users/pandi/PROJECTS/waste-sorting-ml/KNOWN_LIMITATIONS.md)** | Identified operational constraints and future engineering roadmap. |
 
-### Step 2: Extract Project and Install Dependencies
-Navigate to the root project folder:
-```powershell
-cd c:\Users\pandi\PROJECTS\waste-sorting-ml
-```
-Ensure the python virtual environment `venv` is configured. If not, create it and install packages:
-```powershell
-python -m venv venv
-venv\Scripts\python.exe -m pip install -r requirements.txt
-```
+---
 
-### Step 3: Start the Server Using One-Click Batch Script
-Double-click the **`run.bat`** file in the root folder, or execute it in powershell:
-```powershell
-.\run.bat
-```
+## 11. Authors & Academic Acknowledgements
 
-The startup script will automatically:
-1. Initialize the Flask backend server on `http://127.0.0.1:5000`.
-2. Wait 3 seconds to let Flask start up.
-3. Launch the portal directly in your default browser at **`http://127.0.0.1:5000`**.
+* **Student Investigator:** Pandiya Gokul (`Minato0630`)  
+* **Degree Programme:** Master of Science in Computer Science (M.Sc. CS)  
+* **Department:** Department of Computer Science  
+* **Institution:** Bishop Heber College (Autonomous), Tiruchirappalli, Tamil Nadu, India  
+* **Affiliation:** Affiliated with Bharathidasan University  
+* **Project Period:** 2025 – 2026 Academic Year  
 
-### Step 4: Login and Test
-Refer to [admin.txt](file:///C:/Users/pandi/PROJECTS/waste-sorting-ml/admin.txt) for credentials, including the Superior Admin (`super_admin` / `superpass123`) and CS Department Admin (`admin_cs` / `csadmin123`).
+*Special thanks to the faculty, research guides, and campus sanitation staff of Bishop Heber College for their valuable domain insights and support.*
