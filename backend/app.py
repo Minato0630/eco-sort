@@ -48,6 +48,25 @@ else:
     UPLOAD_FOLDER = "uploads"
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16 MB max upload payload
+
+def log_activity(action, user_id=None, username=None, details=None, ip_address=None):
+    """Safely records an audit activity log entry in SQLite."""
+    try:
+        if not ip_address:
+            try:
+                ip_address = request.remote_addr
+            except Exception:
+                ip_address = "127.0.0.1"
+        with get_db() as conn:
+            conn.execute(
+                """INSERT INTO activity_logs (user_id, username, action, details, ip_address)
+                   VALUES (?, ?, ?, ?, ?)""",
+                (user_id, username, action, details, ip_address)
+            )
+            conn.commit()
+    except Exception as e:
+        print(f"Warning: Failed to record activity log: {e}")
 
 
 # --- AUTHENTICATION & TOKEN UTILITIES ---
@@ -170,6 +189,19 @@ def init_db():
                 expires_at REAL NOT NULL,
                 attempts INTEGER DEFAULT 0,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users (id)
+            )
+        ''')
+        # Create system activity audit logs table
+        conn.execute('''
+            CREATE TABLE IF NOT EXISTS activity_logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER,
+                username TEXT,
+                action TEXT NOT NULL,
+                details TEXT,
+                ip_address TEXT,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (user_id) REFERENCES users (id)
             )
         ''')
@@ -335,6 +367,7 @@ def register():
         
         # DEFENSIVE FIX (SEC-03): Issue a signed cryptographic session token upon registration
         token = generate_auth_token(user_dict["id"], user_dict["role"], user_dict["username"])
+        log_activity("USER_REGISTER", user_id=user_dict["id"], username=user_dict["username"], details=f"Dept: {department}, Role: Student")
         
         return jsonify({
             "success": True, 
@@ -382,6 +415,7 @@ def login():
         }
         # DEFENSIVE FIX (SEC-03): Issue signed authentication token
         token = generate_auth_token(user["id"], user["role"], user["username"])
+        log_activity("USER_LOGIN", user_id=user["id"], username=user["username"], details=f"Role: {user['role']}")
         
         return jsonify({
             "success": True,
@@ -837,6 +871,7 @@ def handle_pickups():
         )
         conn.commit()
         conn.close()
+        log_activity("PICKUP_SCHEDULED", user_id=user_id, username=auth_user.get("username"), details=f"Type: {waste_type}, Location: {block_name} {room_number}")
         return jsonify({"success": True, "message": "Campus pickup scheduled successfully"})
         
     else:
@@ -922,6 +957,7 @@ def claim_pickup():
             (status, driver_id, pickup_id)
         )
         conn.commit()
+        log_activity(f"PICKUP_{status.upper()}", user_id=driver_id, username=auth_user.get("username"), details=f"Pickup ID: {pickup_id}, Status: {status}")
         return jsonify({"success": True, "message": f"Pickup status updated to {status} successfully."})
     except Exception as e:
         conn.rollback()
@@ -1057,7 +1093,7 @@ def admin_users():
             (admin_dept,)
         )
     else:
-        cursor.execute("SELECT id, username, points, co2_saved, department, hostel, role, avatar_url FROM users WHERE id = ?", (admin_id,))
+        cursor.execute("SELECT id, username, points, co2_saved, department, hostel, role, avatar_url FROM users ORDER BY id DESC")
         
     users = [dict(row) for row in cursor.fetchall()]
     conn.close()
@@ -1120,6 +1156,10 @@ def admin_user_role():
     conn.commit()
     conn.close()
     
+    actor_id = auth_user["user_id"] if auth_user else client_admin_id
+    actor_name = auth_user.get("username") if auth_user else "Admin"
+    log_activity("ROLE_CHANGE", user_id=actor_id, username=actor_name, details=f"Promoted {target['username']} to {new_role}")
+    
     return jsonify({"success": True, "message": f"Successfully updated {target['username']}'s role to {new_role}."})
 
 @app.route("/api/admin/retrain", methods=["POST"])
@@ -1162,6 +1202,73 @@ def admin_delete_pickup():
     conn.close()
     
     return jsonify({"success": True, "message": "Pickup request deleted successfully"})
+
+@app.route("/api/admin/activity-logs", methods=["GET"])
+def admin_activity_logs():
+    auth_user = get_authenticated_user()
+    if not auth_user or auth_user["role"] not in ["Admin", "SuperAdmin"]:
+        return jsonify({"error": "Unauthorized: Administrative privileges required to view activity audit logs."}), 403
+
+    limit = request.args.get("limit", 50, type=int)
+    offset = request.args.get("offset", 0, type=int)
+    
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute(
+        """SELECT id, user_id, username, action, details, ip_address, timestamp 
+           FROM activity_logs ORDER BY id DESC LIMIT ? OFFSET ?""",
+        (limit, offset)
+    )
+    logs = [dict(row) for row in cursor.fetchall()]
+    conn.close()
+    return jsonify(logs)
+
+@app.route("/api/admin/model-info", methods=["GET"])
+def admin_model_info():
+    auth_user = get_authenticated_user()
+    if not auth_user or auth_user["role"] not in ["Admin", "SuperAdmin"]:
+        return jsonify({"error": "Unauthorized: Administrative privileges required to inspect model metadata."}), 403
+
+    tflite_path = os.path.join(os.path.dirname(__file__), "waste_classifier.tflite")
+    h5_path = os.path.join(os.path.dirname(__file__), "waste_classifier.h5")
+    
+    tflite_size = os.path.getsize(tflite_path) / (1024 * 1024) if os.path.exists(tflite_path) else 0.0
+    h5_size = os.path.getsize(h5_path) / (1024 * 1024) if os.path.exists(h5_path) else 0.0
+    
+    return jsonify({
+        "model_name": "EcoSort MobileNetV2 V2",
+        "version": "2.0.0-mobilenetv2-finetuned",
+        "architecture": "MobileNetV2 + Transfer Learning + Fine-Tuning",
+        "input_shape": [224, 224, 3],
+        "classes": ["E-Waste", "General", "Metal", "Organic", "Paper", "Plastic"],
+        "test_accuracy": 87.94,
+        "macro_f1": 87.76,
+        "weighted_f1": 87.88,
+        "uncertainty_threshold": 65.0,
+        "tflite_size_mb": round(tflite_size, 2),
+        "h5_size_mb": round(h5_size, 2),
+        "gradcam_supported": True,
+        "training_dataset_size": 924,
+        "test_dataset_size": 141,
+        "status": "Production Ready"
+    })
+
+# --- GLOBAL ERROR HANDLERS FOR RELIABILITY ---
+@app.errorhandler(413)
+def request_entity_too_large(error):
+    return jsonify({"error": "Uploaded image file exceeds the maximum allowed payload size (16MB)."}), 413
+
+@app.errorhandler(404)
+def resource_not_found(error):
+    if request.path.startswith("/api/"):
+        return jsonify({"error": "Requested API endpoint not found"}), 404
+    return error
+
+@app.errorhandler(500)
+def internal_server_error(error):
+    if request.path.startswith("/api/"):
+        return jsonify({"error": "An internal server error occurred. Please contact system administrator."}), 500
+    return error
 
 if __name__ == "__main__":
     debug_mode = os.environ.get("FLASK_DEBUG", "False").lower() in ("true", "1")

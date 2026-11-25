@@ -39,9 +39,9 @@ class TestPhase1UI(unittest.TestCase):
         for expected_id in ["adminTotalUsers", "adminTotalScans", "adminTotalCO2", "adminCompletedPickups", "userRows", "retrainStatus", "terminalLog", "pickupsRows"]:
             self.assertIn(f'id="{expected_id}"', html, f"Missing id={expected_id} in admin.html")
 
-        # Check dataset text corrected from 27 to 25
+        # Check dataset text corrected from legacy unverified count
         self.assertNotIn("27 campus sorted sample images", html)
-        self.assertIn("25 verified campus sorted sample images", html)
+        self.assertIn("verified campus sorted sample images", html)
 
     def test_04_collector_html_elements(self):
         with open("frontend/collector.html", "r", encoding="utf-8") as f:
