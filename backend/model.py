@@ -217,6 +217,16 @@ def predict_waste(image_path):
                 
                 mapping = map_label_to_category(label)
                 
+                # Compute valid top predictions from genuine softmax distribution
+                top_indices = np.argsort(preds[0])[::-1][:3]
+                top_predictions = [
+                    {
+                        "category": class_indices_map.get(str(idx), "General").title(),
+                        "confidence": round(float(preds[0][idx]) * 100, 1)
+                    }
+                    for idx in top_indices if float(preds[0][idx]) >= 0.01
+                ]
+                
                 return {
                     "raw_label": label,
                     "detected_item": label.title(),
@@ -225,7 +235,8 @@ def predict_waste(image_path):
                     "bin_color": mapping["color"],
                     "points": mapping["points"],
                     "co2_offset": mapping["co2_offset"],
-                    "confidence": round(confidence, 2)
+                    "confidence": round(confidence, 2),
+                    "top_predictions": top_predictions
                 }
             except Exception as e:
                 print("Error predicting using TFLite interpreter:", e)
@@ -257,6 +268,15 @@ def predict_waste(image_path):
                 
                 mapping = map_label_to_category(label)
                 
+                top_indices = np.argsort(preds[0])[::-1][:3]
+                top_predictions = [
+                    {
+                        "category": class_indices_map.get(str(idx), "General").title(),
+                        "confidence": round(float(preds[0][idx]) * 100, 1)
+                    }
+                    for idx in top_indices if float(preds[0][idx]) >= 0.01
+                ]
+                
                 return {
                     "raw_label": label,
                     "detected_item": label.title(),
@@ -265,7 +285,8 @@ def predict_waste(image_path):
                     "bin_color": mapping["color"],
                     "points": mapping["points"],
                     "co2_offset": mapping["co2_offset"],
-                    "confidence": round(confidence, 2)
+                    "confidence": round(confidence, 2),
+                    "top_predictions": top_predictions
                 }
             except Exception as e:
                 print("Error predicting using Keras model:", e)
