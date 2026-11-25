@@ -9,11 +9,10 @@ app_port: 7860
 
 # Bishop Heber College - EcoSort (Waste Sorting ML)
 
-This repository contains the complete codebase and technical specification for **BHC EcoSort**, an AI-powered smart green portal customized for Bishop Heber College (BHC). The platform incorporates machine learning for waste classification, points-based gamification, inter-department leaderboards, simulated OTP password recovery, and administrative control panels for role promotion and asynchronous model retraining.
+This repository contains the complete codebase and technical specification for **BHC EcoSort**, an AI-powered smart green portal customized for Bishop Heber College (BHC). The platform incorporates machine learning for waste classification, points-based gamification, inter-department leaderboards, cryptographic session token authentication, salted hash OTP recovery, and administrative control panels for role promotion and asynchronous model retraining.
 
-> [!IMPORTANT]
-> A complete package containing all files has been zipped for your convenience.
-> You can download or access the package directly: **[waste_sorting_codebase.zip](file:///C:/Users/pandi/PROJECTS/waste-sorting-ml/waste_sorting_codebase.zip)**.
+> [!NOTE]
+> **EcoSort V2 Modernization**: Features an environmental technology design system (Forest & Emerald Green), functional Light/Dark theme switching, AI scanner uncertainty states, and serverless deployment on Vercel.
 
 ---
 
@@ -41,6 +40,8 @@ c:\Users\pandi\PROJECTS\waste-sorting-ml
 │   ├── admin.html               # Administrative control panel Dashboard
 │   ├── collector.html           # Campus Garbage Collector work order panel
 │   ├── index.html               # Main Student/General User login & scanning dashboard
+│   ├── css/ecosort.css          # EcoSort Unified Environmental Tech Design System
+│   ├── js/theme.js              # Theme engine, toast notification & auth helpers
 │   ├── bhc-logo.png             # Bishop Heber College emblem
 │   ├── ecosort-logo.png         # EcoSort system branding logo
 │   └── uploads/                 # Static uploads folder (holds profile avatars)
@@ -62,22 +63,21 @@ c:\Users\pandi\PROJECTS\waste-sorting-ml
 * **Admin Dashboard**: [frontend/admin.html](file:///C:/Users/pandi/PROJECTS/waste-sorting-ml/frontend/admin.html)
 * **Startup Script**: [run.bat](file:///C:/Users/pandi/PROJECTS/waste-sorting-ml/run.bat)
 * **Python Requirements**: [requirements.txt](file:///C:/Users/pandi/PROJECTS/waste-sorting-ml/requirements.txt)
-* **Credentials Directory**: [admin.txt](file:///C:/Users/pandi/PROJECTS/waste-sorting-ml/admin.txt)
 
 ---
 
 ## 2. Technical Stack & Dependencies
 
 ### Backend Technologies
-* **Language**: Python 3.10.11
-* **Framework**: Flask (v3.1.2) with Flask-Cors (v6.0.2) for cross-origin frontend requests.
-* **Machine Learning**: TensorFlow (v2.20.0), NumPy (v2.2.6), and Pillow (v12.1.0) for image handling.
+* **Language**: Python 3.12 (Vercel Serverless & Local Virtual Environment)
+* **Framework**: Flask (v3.1.2) with Flask-Cors (v6.0.2) and URLSafeTimedSerializer for cryptographic tokens.
+* **Machine Learning**: Google LiteRT (`ai-edge-litert` / TensorFlow Lite), NumPy, and Pillow for structural image validation.
 * **Database**: SQLite3 utilizing SQLite Row factory mappings.
 * **Server**: Gunicorn (for production/Docker deployment).
 
 ### Frontend Technologies
 * **Core**: Semantic HTML5 and JavaScript (Vanilla ES6).
-* **Styling**: Modern CSS3 using CSS Custom Properties (CSS variables) for glassmorphic dark-theme layouts, a dark blue radial theme background (`#030712`), and Outfit typography.
+* **Styling**: EcoSort Environmental Tech Design System (`css/ecosort.css`) featuring Forest Green (`#2d6a4f`), Emerald (`#52b788`), Charcoal, and Off-White palettes with functional Light and Dark mode options.
 * **Libraries**:
   * **Chart.js (v4.4.0)**: Interactive dashboard charts.
   * **Leaflet.js (v1.9.4)**: Canvas-based interactive mapping of campus blocks and pickup hubs.
